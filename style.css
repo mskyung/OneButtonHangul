@@ -1,0 +1,282 @@
+/* 폰트 관련은 이전처럼 제거된 상태로 가정 */
+
+/* 기본 스타일: 모든 기기에 공통으로 적용 */
+body {
+    font-family: '맑은 고딕', 'Malgun Gothic', sans-serif;
+    text-align: center;
+    padding: 10px;
+    padding-bottom: 250px; /* 고정된 버튼 영역 및 옵션 패널 영역만큼 아래쪽 패딩을 충분히 확보 */
+    margin: 0 auto;
+    max-width: 960px;
+    box-sizing: border-box;
+    position: relative; 
+    min-height: 100vh; 
+}
+
+h1 {
+    font-family: '맑은 고딕', 'Malgun Gothic', sans-serif;
+    color: #4CAF50;
+    text-align: center;
+    font-size: 2.5em;
+    margin-bottom: 20px;
+}
+
+p {
+    font-size: 1.1em;
+    color: #333;
+}
+
+/* textarea (입력 박스) 스타일 */
+textarea#kkotipInput {
+    font-family: '맑은 고딕', 'Malgun Gothic', sans-serif;
+    font-size: 1.5em;
+    color: #333;
+    width: 400px;
+    height: 400px; /* PC에서는 정사각형 */
+    max-width: 90%; 
+    min-height: 200px; 
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    padding: 10px;
+    resize: vertical;
+    display: block;
+    margin: 20px auto; 
+}
+
+/* 오른손/왼손 선택 패널 스타일 */
+#controlPanel {
+    position: fixed; /* !!! 화면에 고정 !!! */
+    bottom: 20px;    /* 입력 버튼과 동일한 바닥 정렬 기준점 */
+    /* right: 50%; */ /* 일단 가운데 정렬을 위해 50%를 기준으로 */
+    /* transform: translateX(50%); */ /* 정확히 가운데 오도록 조정 (나중에 필요시) */
+    width: 100%; /* 너비를 꽉 채워서 가운데 정렬하기 쉽게 */
+    max-width: 400px; /* 최대 너비는 유지 */
+    left: 50%; /* 중앙 정렬 */
+    transform: translateX(-50%); /* 중앙 정렬 */
+    z-index: 1010; /* !!! 입력 버튼보다 높은 z-index로 위로 오도록 !!! */
+    text-align: center;
+    background-color: #f9f9f9;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    display: flex;
+    justify-content: center; 
+    align-items: center;
+    flex-wrap: wrap; 
+    gap: 15px; 
+    box-sizing: border-box; /* 패딩 포함 너비 계산 */
+    margin: 0; /* fixed 요소는 마진이 필요 없음 */
+}
+
+.hand-selection {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 1.1em;
+    color: #555;
+}
+
+.hand-selection input[type="radio"] {
+    margin-right: 5px;
+    accent-color: #4CAF50; 
+    width: 18px; 
+    height: 18px;
+}
+
+.hand-selection label {
+    cursor: pointer;
+    padding: 5px 0;
+}
+
+
+/* 입력 버튼 컨테이너 */
+#inputButtons {
+    position: fixed; /* !!! 화면에 고정 !!! */
+    bottom: 20px;    /* 아래에서 20px 떨어지게 */
+    right: 20px;     /* 기본은 오른쪽에 고정되도록 설정 */
+    z-index: 1000;   /* !!! controlPanel보다 낮은 z-index로 controlPanel 아래에 보임 !!! */
+    display: flex; 
+    justify-content: center;
+    align-items: center;
+    width: auto; 
+}
+
+/* 기본적으로 오른손잡이 위치 (우측 하단) */
+#inputButtons.right-hand {
+    left: auto; 
+    right: 20px; 
+}
+
+/* 왼손잡이 위치 (좌측 하단) */
+#inputButtons.left-hand {
+    left: 20px;
+    right: auto; 
+}
+
+/* 개별 입력 버튼 스타일 */
+.input-button {
+    width: 150px; /* PC에서 고정 너비 */
+    height: 150px; /* PC에서 고정 높이 (정사각형) */
+    min-width: 100px; /* 최소 너비 (모바일) */
+    min-height: 100px; /* 최소 높이 (모바일, 정사각형 유지) */
+    max-width: 40vw; /* 최대 너비 (모바일 화면에 맞춰짐) */
+    max-height: 40vw; /* 최대 높이 (모바일 화면에 맞춰 정사각형 비율 유지) */
+    padding: 0;
+    font-size: 1.5em; 
+    background-color: #f0f8f4; 
+    border: 2px solid #4CAF50;
+    border-radius: 15px;
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+    position: relative; 
+    overflow: hidden;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    flex-shrink: 0; 
+    flex-grow: 0;   
+    margin: 5px;
+    color: #388e3c; 
+}
+
+.input-button:active {
+    background-color: #dcedc8;
+}
+
+/* !!!! 버튼 내부에 선을 그릴 div.lines 컨테이너 스타일 !!!! */
+.input-button .lines {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 1; 
+    pointer-events: none; 
+}
+
+/* !!!! 8개의 각도별 선 그리기 (공통 스타일) !!!! */
+.input-button .lines span {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1px; 
+    background-color: rgba(0,0,0,0.1); 
+    transform-origin: center center;
+    transform: translateY(-50%); 
+}
+
+/* 각도별 선 스타일 */
+.input-button .lines .line-22-5 { transform: translateY(-50%) rotate(22.5deg); }
+.input-button .lines .line-67-5 { transform: translateY(-50%) rotate(67.5deg); }
+.input-button .lines .line-112-5 { transform: translateY(-50%) rotate(112.5deg); }
+.input-button .lines .line-157-5 { transform: translateY(-50%) rotate(157.5deg); }
+
+/* Refresh 버튼 컨테이너 (현재 HTML에 없음, 필요시 추가) */
+div#controls {
+    text-align: center;
+    margin-top: 20px;
+}
+
+/* Refresh 버튼 스타일 (현재 HTML에 없음, 필요시 추가) */
+button#refreshButton {
+    font-family: '맑은 고딕', 'Malgun Gothic', sans-serif;
+    font-size: 1.1em;
+    padding: 10px 20px;
+    border: 1px solid #d32f2f;
+    background-color: #ffebee;
+    color: #c62828;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+button#refreshButton:hover {
+    background-color: #ffcdd2;
+    transform: translateY(-2px);
+}
+
+button#refreshButton:active {
+    background-color: #ef9a9a;
+    transform: translateY(0);
+}
+
+/* 디버그 출력 */
+#debugOutput {
+    margin-top: 20px;
+    font-size: 0.9em;
+    color: #666;
+    min-height: 20px;
+}
+
+
+/* =======================================
+   미디어 쿼리: 모바일 기기에 최적화 (화면 너비가 600px 이하일 때 적용)
+   ======================================= */
+@media (max-width: 600px) {
+    body {
+        padding-bottom: 200px; /* 모바일에서는 아래쪽 패딩을 조금 줄여줘도 됨 */
+    }
+    textarea#kkotipInput {
+        width: 90%;
+        height: auto;
+        min-height: 200px;
+        font-size: 1.3em;
+        margin-bottom: 20px; 
+    }
+
+    /* 입력 버튼 컨테이너 */
+    #inputButtons {
+        bottom: 70px; /* 모바일에서는 아래 여백을 좀 줄여줘도 돼 */
+    }
+    #inputButtons.right-hand {
+        right: 10px; /* 모바일 오른쪽 여백 */
+    }
+    #inputButtons.left-hand {
+        left: 10px; /* 모바일 왼쪽 여백 */
+    }
+    
+    .input-button {
+        width: 40vw; /* 모바일에서 조금 작게 */
+        height: 40vw; /* 모바일에서 조금 작게 */
+        font-size: 1em;
+    }
+    
+    button#refreshButton {
+        font-size: 1em;
+        padding: 8px 15px;
+    }
+
+    /* 오른손/왼손 선택 패널 스타일 */
+    #controlPanel {
+        padding: 8px;
+        font-size: 0.95em;
+        gap: 10px;
+        margin: 0; /* fixed 요소는 마진 0으로 설정 */
+        bottom: 10px; /* 모바일에서 입력버튼 위에 오도록 bottom 값 조정 (버튼 높이 고려) */
+    }
+}
+
+/* =======================================
+   미디어 쿼리: 아주 작은 모바일 기기 (화면 너비가 480px 이하일 때 적용)
+   ======================================= */
+@media (max-width: 480px) {
+    textarea#kkotipInput {
+        font-size: 1.1em;
+        min-height: 150px;
+    }
+
+    .input-button {
+        width: 45vw; /* 여전히 45vw 유지 */
+        height: 45vw;
+        font-size: 1em;
+    }
+    
+    button#refreshButton {
+        font-size: 0.9em;
+        padding: 6px 12px;
+    }
+    #controlPanel {
+        font-size: 0.9em;
+    }
+}
