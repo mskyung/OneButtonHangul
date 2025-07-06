@@ -33,8 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastSegmentAngle = null;
     let inputSequence = []; // [첫 8방향, 첫 꺾임 방향 (left/right 또는 left_large/right_large), 두 번째 꺾임 방향 (left/right)]
 
-    const TAP_DURATION_THRESHOLD = 500;
-    const DRAG_DISTANCE_THRESHOLD = 5;
+    const TAP_DURATION_THRESHOLD = 200;
+    const DRAG_DISTANCE_THRESHOLD = 12;
     
     // 자음/모음 공통 꺾임 최소 각도
     const COMMON_MIN_TURN_ANGLE = 10;
