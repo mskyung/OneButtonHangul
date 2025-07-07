@@ -49,19 +49,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const JUNGSUNG = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ'];
     const JONGSUNG = ['', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
 
+    // 복합 중성 및 겹받침 조합 맵 (새로 추가되거나 확장된 부분)
+    const COMPLEX_JUNGSUNG_MAP = {
+        'ㅗㅏ': 'ㅘ', 'ㅗㅐ': 'ㅙ', 'ㅗㅣ': 'ㅚ',
+        'ㅜㅓ': 'ㅝ', 'ㅜㅔ': 'ㅞ', 'ㅜㅣ': 'ㅟ',
+        'ㅡㅣ': 'ㅢ',
+    };
+    const COMPLEX_JONGSUNG_MAP = {
+        'ㄱㅅ': 'ㄳ', 'ㄴㅈ': 'ㄵ', 'ㄴㅎ': 'ㄶ',
+        'ㄹㄱ': 'ㄺ', 'ㄹㅁ': 'ㄻ', 'ㄹㅂ': 'ㄼ', 'ㄹㅅ': 'ㄽ', 'ㄹㅌ': 'ㄾ', 'ㄹㅍ': 'ㄿ', 'ㄹㅎ': 'ㅀ',
+        'ㅂㅅ': 'ㅄ',
+    };
+
     // 입력된 문자가 초성/중성/종성 중 무엇인지 판별하는 함수
     function getCharType(char) {
         if (CHOSUNG.includes(char)) return 'cho';
-        if (JUNGSUNG.includes(char)) return 'jung';
-        if (JONGSUNG.includes(char) && JONGSUNG.indexOf(char) !== 0) return 'jong'; // 종성 없음('') 제외
+        // 복합 중성/종성 문자도 해당 타입으로 인식하도록 확장
+        if (JUNGSUNG.includes(char) || Object.values(COMPLEX_JUNGSUNG_MAP).includes(char)) return 'jung';
+        if (JONGSUNG.includes(char) && JONGSUNG.indexOf(char) !== 0 || Object.values(COMPLEX_JONGSUNG_MAP).includes(char)) return 'jong';
         return null;
     }
 
     // 초성, 중성, 종성의 인덱스를 가져오는 함수
     function getCharIndex(char, type) {
         if (type === 'cho') return CHOSUNG.indexOf(char);
-        if (type === 'jung') return JUNGSUNG.indexOf(char);
-        if (type === 'jong') return JONGSUNG.indexOf(char);
+        if (type === 'jung') {
+            // 복합 중성도 인덱스에서 찾도록 처리
+            const idx = JUNGSUNG.indexOf(char);
+            if (idx !== -1) return idx;
+            // TODO: COMPLEX_JUNGSUNG_MAP에서 역으로 찾는 로직이 필요할 수 있으나, 현재는 char가 단일 문자열로 들어옴
+        }
+        if (type === 'jong') {
+            // 복합 종성도 인덱스에서 찾도록 처리
+            const idx = JONGSUNG.indexOf(char);
+            if (idx !== -1) return idx;
+            // TODO: COMPLEX_JONGSUNG_MAP에서 역으로 찾는 로직이 필요할 수 있으나, 현재는 char가 단일 문자열로 들어옴
+        }
         return -1;
     }
 
@@ -74,8 +97,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                (currentJong !== -1 ? currentJong : 0);
             return String.fromCharCode(combinedCode);
         }
-        // 초성이나 중성 없이 종성만 있을 경우 처리 (예: 이전 글자의 종성을 바꾸는 경우)
-        // 이 부분은 나중에 백스페이스 기능과 연동하여 더 정교하게 만들 수 있어요.
         return '';
     }
 
@@ -124,8 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
             'down-right': { angle: [22.5, 67.5], char: 'ㅣ' }
         },
         'transitions_consonant': {
-            'right_left': 'ㅎ', 'right_right': 'ㅉ', // '.' -> 'ㅉ' 로 변경 (임시값 -> 실제 자음으로)
-            'up_left': 'ㅊ', 'up_right': 'ㅉ',
+            'right_left': 'ㅎ', 'right_right': '.', // '.' -> 'ㅉ' 로 변경 (임시값 -> 실제 자음으로)
+            'up_left': 'ㅊ', 'up_right': 'ㅆ',
             'left_left': 'ㅌ', 'left_right': 'ㄸ',
             'down_left': 'ㅍ', 'down_right': 'ㅃ',
             'up-right_left': 'ㅋ', 'up-right_right': 'ㄲ',
@@ -136,12 +157,12 @@ document.addEventListener('DOMContentLoaded', () => {
         'transitions_vowel': {
             'right_left': 'ㅐ',
 	        'right_right': 'ㅒ',
-            'up_left': 'ㅚ',
-	        'up_right': 'ㅘ',
+            'up_left': 'ㅚ', // 'ㅗㅣ' 조합
+	        'up_right': 'ㅘ', // 'ㅗㅏ' 조합
             'left_left': 'ㅔ',
 	        'left_right': 'ㅖ',
-            'down_left': 'ㅟ',
-	        'down_right': 'ㅝ',
+            'down_left': 'ㅟ', // 'ㅜㅣ' 조합
+	        'down_right': 'ㅝ', // 'ㅜㅓ' 조합
             'right_left_large': 'ㅑ',
             'right_right_large': 'ㅑ',
             'up_left_large': 'ㅛ',
@@ -150,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'left_right_large': 'ㅕ',
             'down_left_large': 'ㅠ',
             'down_right_large': 'ㅠ',
-            'up-right_left_large': 'ㅢ',
+            'up-right_left_large': 'ㅢ', // 'ㅡㅣ' 조합
             'up-right_right_large': 'ㅢ',
             'up-left_left_large': 'ㅢ',
             'up-left_right_large': 'ㅢ',
@@ -160,12 +181,14 @@ document.addEventListener('DOMContentLoaded', () => {
             'down-right_right_large': 'ㅢ',
         },
         'multi_transitions_vowel': {
-            'up_left_large_right': 'ㅙ',
-            'up_left_large_left': 'ㅙ', // ㅙ는 ㅗ + ㅐ
+            // 이 부분은 이미 복합 중성으로 매핑되어 있으므로, 굳이 'multi_transitions'로 다시 조합할 필요는 줄어듬
+            // 다만, 사용 방식에 따라 3번째 제스처가 의미를 가질 수 있으므로 일단 남겨둠.
+            'up_left_large_right': 'ㅙ', // ㅗㅏ + ㅣ -> ㅙ (ㅗ + ㅏ + ㅣ)
+            'up_left_large_left': 'ㅙ',
             'up_right_large_right': 'ㅙ',
             'up_right_large_left': 'ㅙ',
             'down_left_large_right': 'ㅞ',
-            'down_left_large_left': 'ㅞ', // ㅞ는 ㅜ + ㅔ
+            'down_left_large_left': 'ㅞ',
             'down_right_large_right': 'ㅞ',
             'down_right_large_left': 'ㅞ',
         }
@@ -380,12 +403,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (char) {
                 const charType = getCharType(char);
                 let currentText = kkotipInput.value;
-                let lastChar = currentText.slice(-1);
-                let lastCharIsHangul = (lastChar.charCodeAt(0) >= HANGUL_BASE_CODE && lastChar.charCodeAt(0) < HANGUL_BASE_CODE + CHOSUNG_COUNT * JUNGSUNG_COUNT * JONGSUNG_COUNT);
 
                 if (charType === 'cho') { // 초성 입력
-                    // 이전에 조합 중인 글자가 있거나 마지막 글자가 한글 완성형이라면 확정
-                    if (currentCho !== -1 || currentJung !== -1 || currentJong !== -1 || lastCharIsHangul) {
+                    // 이전에 조합 중인 글자가 있다면 확정하고 새로 시작
+                    if (currentCho !== -1 || currentJung !== -1 || currentJong !== -1) {
                         let combinedChar = combineHangul();
                         if (combinedChar) {
                             kkotipInput.value = currentText.slice(0, -1) + combinedChar;
@@ -395,94 +416,59 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentCho = getCharIndex(char, 'cho');
                     kkotipInput.value += char; // 임시로 초성만 추가
                 } else if (charType === 'jung') { // 중성 입력
-                    if (currentCho !== -1 && currentJung === -1) { // 초성만 있는 상태에서 중성 입력 (가장 일반적인 조합)
-                        currentJung = getCharIndex(char, 'jung');
-                        kkotipInput.value = currentText.slice(0, -1) + combineHangul();
-                    } else if (currentCho !== -1 && currentJung !== -1 && currentJong === -1) {
-                        // 현재 완성된 초+중 글자에서 중성 변경 또는 복합 중성 생성 시도
-                        // 예: ㅏ -> ㅑ (단일 중성 교체), ㅗ -> ㅗ+ㅏ (ㅘ)
-                        // 현재는 단순 중성 교체만 고려
-                        let prevJungChar = JUNGSUNG[currentJung];
-                        let newJungIndex = -1;
+                    if (currentCho !== -1) { // 초성이 있는 상태에서 중성 입력
+                        let prevJungChar = (currentJung !== -1) ? JUNGSUNG[currentJung] : '';
+                        let newComplexJung = COMPLEX_JUNGSUNG_MAP[prevJungChar + char];
 
-                        // 복합 중성 처리 로직 추가 (예: ㅗ + ㅏ = ㅘ)
-                        if ((prevJungChar === 'ㅗ' && char === 'ㅏ') || (prevJungChar === 'ㅜ' && char === 'ㅓ')) {
-                            if (prevJungChar === 'ㅗ' && char === 'ㅏ') newJungIndex = getCharIndex('ㅘ', 'jung');
-                            if (prevJungChar === 'ㅜ' && char === 'ㅓ') newJungIndex = getCharIndex('ㅝ', 'jung');
-                            // 여기에 다른 복합 모음 조합 추가 가능
-                        }
-
-                        if (newJungIndex !== -1) { // 복합 중성 성공
-                            currentJung = newJungIndex;
+                        if (newComplexJung && currentJung !== -1) { // 기존 중성과 새 중성으로 복합 중성 조합 가능
+                            currentJung = getCharIndex(newComplexJung, 'jung');
                             kkotipInput.value = currentText.slice(0, -1) + combineHangul();
-                        } else { // 새로운 모음으로 간주 (이전 글자 확정 후 새 글자 시작)
-                             let combinedChar = combineHangul();
-                             if(combinedChar) {
+                        } else if (currentJung === -1) { // 초성만 있고 중성 처음 입력
+                            currentJung = getCharIndex(char, 'jung');
+                            kkotipInput.value = currentText.slice(0, -1) + combineHangul();
+                        } else { // 새로운 중성 (복합 조합 불가) -> 이전 글자 확정 후 새 글자 시작
+                            let combinedChar = combineHangul();
+                            if(combinedChar) {
                                 kkotipInput.value = currentText.slice(0, -1) + combinedChar;
-                             }
-                             resetCombination();
-                             currentJung = getCharIndex(char, 'jung');
-                             kkotipInput.value += char; // 새 중성 임시 추가
+                            }
+                            resetCombination();
+                            currentJung = getCharIndex(char, 'jung'); // 새 글자의 중성으로 시작 (초성 없이)
+                            kkotipInput.value += char;
                         }
-                    } else { // 초성/중성 없이 중성 단독 입력 (예: 'ㅏ'만 입력)
+                    } else { // 초성 없이 중성 단독 입력
                         resetCombination();
                         currentJung = getCharIndex(char, 'jung');
                         kkotipInput.value += char;
                     }
                 } else if (charType === 'jong') { // 종성 입력
-                    if (currentCho !== -1 && currentJung !== -1 && currentJong === -1) { // 초성+중성 상태에서 종성 입력 (가장 일반적인 종성 추가)
-                        currentJong = getCharIndex(char, 'jong');
-                        kkotipInput.value = currentText.slice(0, -1) + combineHangul();
-                    } else if (currentCho !== -1 && currentJung !== -1 && currentJong !== -1) {
-                        // 기존 종성이 있는 상태에서 종성 입력 (겹받침 시도 또는 종성 교체)
-                        let prevJongChar = JONGSUNG[currentJong];
-                        let newJongIndex = -1;
-
-                        // 겹받침 처리 (예: ㄱ + ㅅ = ㄳ)
-                        if ((prevJongChar === 'ㄱ' && char === 'ㅅ') || (prevJongChar === 'ㄴ' && char === 'ㅈ')) {
-                            if (prevJongChar === 'ㄱ' && char === 'ㅅ') newJongIndex = getCharIndex('ㄳ', 'jong');
-                            if (prevJongChar === 'ㄴ' && char === 'ㅈ') newJongIndex = getCharIndex('ㄵ', 'jong');
-                            // 여기에 다른 겹받침 조합 추가 가능
-                        }
-                        // 단일 종성 교체 (새로운 종성이 들어오면 기존 종성을 지우고 새 종성으로 대체)
-                        if (newJongIndex === -1 && getCharIndex(char, 'jong') !== -1) {
-                            // 기존 종성 분리 로직 (예: '값'에서 'ㅂ' 지우고 'ㄹ' 넣으면 '갈')
-                            // 이 부분은 복잡해서 현재는 기존 종성을 지우고 새 종성을 붙이는 방식으로 간소화
-                            let previousCombinedChar = combineHangul(); // 현재까지의 글자 (종성 포함)
-                            let previousCho = currentCho;
-                            let previousJung = currentJung;
-                            let previousJong = currentJong;
-
-                            // 새 종성으로 합쳐질 수 있는지 확인
+                    if (currentCho !== -1 && currentJung !== -1) { // 초성+중성 상태
+                        if (currentJong === -1) { // 기존 종성 없음: 새 종성 추가
                             currentJong = getCharIndex(char, 'jong');
-                            let tryCombine = combineHangul();
-
-                            if (tryCombine) {
-                                kkotipInput.value = currentText.slice(0, -1) + tryCombine;
-                            } else { // 합쳐질 수 없으면 이전 글자 확정하고 새 글자로 시작
-                                kkotipInput.value = currentText.slice(0, -1) + previousCombinedChar;
-                                resetCombination();
-                                kkotipInput.value += char; // 단독 종성으로 추가
-                            }
-                        } else if (newJongIndex !== -1) { // 겹받침 성공
-                            currentJong = newJongIndex;
                             kkotipInput.value = currentText.slice(0, -1) + combineHangul();
-                        } else { // 새로운 종성이 들어왔지만 겹받침 안될 경우, 이전 글자 확정 후 새 글자로 시작
-                             let combinedChar = combineHangul();
-                             if(combinedChar) {
-                                kkotipInput.value = currentText.slice(0, -1) + combinedChar;
-                             }
-                             resetCombination();
-                             currentCho = getCharIndex(char, 'cho'); // 종성이 초성으로 시작하는 경우
-                             kkotipInput.value += char; // 단독으로 추가
-                        }
+                        } else { // 기존 종성 있음: 겹받침 시도 또는 종성 교체/분리
+                            let prevJongChar = JONGSUNG[currentJong];
+                            let newComplexJong = COMPLEX_JONGSUNG_MAP[prevJongChar + char];
 
-                    } else { // 초성/중성 없이 종성 단독 입력 (새로운 글자로 시작)
+                            if (newComplexJong) { // 겹받침 성공
+                                currentJong = getCharIndex(newComplexJong, 'jong');
+                                kkotipInput.value = currentText.slice(0, -1) + combineHangul();
+                            } else { // 겹받침 불가: 기존 종성 글자 확정하고 새 글자로 시작 (새로 입력된 종성은 새 글자의 초성이 됨)
+                                // 현재 글자 확정
+                                let combinedChar = combineHangul();
+                                if(combinedChar) {
+                                    kkotipInput.value = currentText.slice(0, -1) + combinedChar;
+                                }
+                                resetCombination();
+                                currentCho = getCharIndex(char, 'cho'); // 새로 입력된 자음은 다음 글자의 초성
+                                kkotipInput.value += char;
+                            }
+                        }
+                    } else { // 초성/중성 없이 종성 단독 입력 (새로운 글자로 시작, 단독 초성으로 간주)
                         resetCombination();
-                        currentJong = getCharIndex(char, 'jong'); // 일단 종성으로 저장하지만, 초성이 없으니 한글은 안 됨
+                        currentCho = getCharIndex(char, 'cho'); // 종성은 초성으로 들어온 것으로 간주
                         kkotipInput.value += char;
                     }
-                } else { // 한글 자모가 아닌 다른 문자 (예: 숫자, 특수문자 등)
+                } else { // 한글 자모가 아닌 다른 문자 (숫자, 특수문자 등)
                     // 현재 조합 중인 글자가 있다면 확정하고 새로운 문자 추가
                     if (currentCho !== -1 || currentJung !== -1 || currentJong !== -1) {
                         let combinedChar = combineHangul();
