@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     const kkotipInput = document.getElementById('kkotipInput');
-    const inputButtonContainer = document.getElementById('inputButtons'); 
-    const mainInputButton = document.getElementById('mainInputButton'); 
-    const refreshButton = document.getElementById('refreshButton'); 
+    const inputButtonContainer = document.getElementById('inputButtons');
+    const mainInputButton = document.getElementById('mainInputButton');
+    const refreshButton = document.getElementById('refreshButton');
     const debugOutput = document.getElementById('debugOutput');
     const rightHandRadio = document.getElementById('rightHand');
     const leftHandRadio = document.getElementById('leftHand');
@@ -27,31 +27,80 @@ document.addEventListener('DOMContentLoaded', () => {
     let startY = 0;
     let prevX = 0;
     let prevY = 0;
-    let isDragging = false; 
-    let touchStartTime = 0; 
-    let isConsonantModeActive = false; // 초기 모드: false (모음 입력 모드)
+    let isDragging = false;
+    let touchStartTime = 0;
+    let isConsonantModeActive = true; // 초기 모드: true (자음 입력 모드)
 
-    let firstDragAngle = null; 
-    let lastSegmentAngle = null; 
-    let inputSequence = []; 
+    let firstDragAngle = null;
+    let lastSegmentAngle = null;
+    let inputSequence = [];
 
-    const TAP_DURATION_THRESHOLD = 250; 
-    const DRAG_DISTANCE_THRESHOLD = 8; 
-    
-    // --- 여기 상수들을 조절해 보는 게 중요해요 오빠! ---
-    // 이미지에서 주석 처리된 값으로 변경 (30도 이상 꺾여야 전환으로 인식)
-    const COMMON_MIN_TURN_ANGLE = 30; // 10에서 30으로 변경!
-    const COMMON_MAX_TURN_ANGLE = 350; 
+    // --- 한글 조합 관련 변수들 ---
+    let currentCho = -1; // 현재 조합 중인 초성 인덱스
+    let currentJung = -1; // 현재 조합 중인 중성 인덱스
+    let currentJong = -1; // 현재 조합 중인 종성 인덱스
+    const HANGUL_BASE_CODE = 0xAC00; // '가'의 유니코드 값
+    const CHOSUNG_COUNT = 19;
+    const JUNGSUNG_COUNT = 21;
+    const JONGSUNG_COUNT = 28; // 종성 없음(1) 포함
 
-    const VOWEL_SMALL_TURN_ANGLE_MAX = 135; 
-    const VOWEL_LARGE_TURN_ANGLE_MIN = 135; 
+    // 한글 초성, 중성, 종성 매핑 (순서 중요!)
+    const CHOSUNG = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+    const JUNGSUNG = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ'];
+    const JONGSUNG = ['', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+
+    // 입력된 문자가 초성/중성/종성 중 무엇인지 판별하는 함수
+    function getCharType(char) {
+        if (CHOSUNG.includes(char)) return 'cho';
+        if (JUNGSUNG.includes(char)) return 'jung';
+        if (JONGSUNG.includes(char) && JONGSUNG.indexOf(char) !== 0) return 'jong'; // 종성 없음('') 제외
+        return null;
+    }
+
+    // 초성, 중성, 종성의 인덱스를 가져오는 함수
+    function getCharIndex(char, type) {
+        if (type === 'cho') return CHOSUNG.indexOf(char);
+        if (type === 'jung') return JUNGSUNG.indexOf(char);
+        if (type === 'jong') return JONGSUNG.indexOf(char);
+        return -1;
+    }
+
+    // 한글 조합 함수
+    function combineHangul() {
+        if (currentCho !== -1 && currentJung !== -1) {
+            let combinedCode = HANGUL_BASE_CODE +
+                               (currentCho * JUNGSUNG_COUNT * JONGSUNG_COUNT) +
+                               (currentJung * JONGSUNG_COUNT) +
+                               (currentJong !== -1 ? currentJong : 0);
+            return String.fromCharCode(combinedCode);
+        }
+        // 초성이나 중성 없이 종성만 있을 경우 처리 (예: 이전 글자의 종성을 바꾸는 경우)
+        // 이 부분은 나중에 백스페이스 기능과 연동하여 더 정교하게 만들 수 있어요.
+        return '';
+    }
+
+    // 현재 조합 중인 글자 초기화
+    function resetCombination() {
+        currentCho = -1;
+        currentJung = -1;
+        currentJong = -1;
+    }
+
+    const TAP_DURATION_THRESHOLD = 250;
+    const DRAG_DISTANCE_THRESHOLD = 8;
+
+    const COMMON_MIN_TURN_ANGLE = 30;
+    const COMMON_MAX_TURN_ANGLE = 350;
+
+    const VOWEL_SMALL_TURN_ANGLE_MAX = 135;
+    const VOWEL_LARGE_TURN_ANGLE_MIN = 135;
 
     const ALL_8_DIRECTIONS_NAMES = [
         'right', 'up-right', 'up', 'up-left',
         'left', 'down-left', 'down', 'down-right'
     ];
-    const TURN_DIRECTIONS_NAMES = ['left', 'right']; 
-    const VOWEL_LARGE_TURN_DIRECTIONS = ['left_large', 'right_large']; 
+    const TURN_DIRECTIONS_NAMES = ['left', 'right'];
+    const VOWEL_LARGE_TURN_DIRECTIONS = ['left_large', 'right_large'];
 
     const DIRECTIONS = {
         'consonant': {
@@ -67,15 +116,15 @@ document.addEventListener('DOMContentLoaded', () => {
         'vowel': {
             'right': { angle: [337.5, 22.5], char: 'ㅏ' },
             'up-right': { angle: [292.5, 337.5], char: 'ㅡ' },
-            'up': { angle: [247.5, 292.5], char: 'ㅗ' }, 
-            'up-left': { angle: [202.5, 247.5], char: 'ㅡ' },            
+            'up': { angle: [247.5, 292.5], char: 'ㅗ' },
+            'up-left': { angle: [202.5, 247.5], char: 'ㅡ' },
             'left': { angle: [157.5, 202.5], char: 'ㅓ' },
             'down-left': { angle: [112.5, 157.5], char: 'ㅣ' },
             'down': { angle: [67.5, 112.5], char: 'ㅜ' },
             'down-right': { angle: [22.5, 67.5], char: 'ㅣ' }
         },
         'transitions_consonant': {
-            'right_left': 'ㅎ', 'right_right': '.',
+            'right_left': 'ㅎ', 'right_right': 'ㅉ', // '.' -> 'ㅉ' 로 변경 (임시값 -> 실제 자음으로)
             'up_left': 'ㅊ', 'up_right': 'ㅉ',
             'left_left': 'ㅌ', 'left_right': 'ㄸ',
             'down_left': 'ㅍ', 'down_right': 'ㅃ',
@@ -85,39 +134,39 @@ document.addEventListener('DOMContentLoaded', () => {
             'down-right_left': 'ㅁ', 'down-right_right': 'ㅁ',
         },
         'transitions_vowel': {
-            'right_left': 'ㅐ', 
-	        'right_right': 'ㅒ', 
-            'up_left': 'ㅚ', 
+            'right_left': 'ㅐ',
+	        'right_right': 'ㅒ',
+            'up_left': 'ㅚ',
 	        'up_right': 'ㅘ',
-            'left_left': 'ㅔ', 
-	        'left_right': 'ㅖ', 
-            'down_left': 'ㅟ', 
-	        'down_right': 'ㅝ', 
-            'right_left_large': 'ㅑ', 
-            'right_right_large': 'ㅑ', 
-            'up_left_large': 'ㅛ',   
-            'up_right_large': 'ㅛ',   
-            'left_left_large': 'ㅕ', 
-            'left_right_large': 'ㅕ', 
-            'down_left_large': 'ㅠ',   
-            'down_right_large': 'ㅠ',  
-            'up-right_left_large': 'ㅢ', 
-            'up-right_right_large': 'ㅢ', 
-            'up-left_left_large': 'ㅢ',   
-            'up-left_right_large': 'ㅢ',   
-            'down-left_left_large': 'ㅢ', 
-            'down-left_right_large': 'ㅢ', 
-            'down-right_left_large': 'ㅢ',   
-            'down-right_right_large': 'ㅢ',             
+            'left_left': 'ㅔ',
+	        'left_right': 'ㅖ',
+            'down_left': 'ㅟ',
+	        'down_right': 'ㅝ',
+            'right_left_large': 'ㅑ',
+            'right_right_large': 'ㅑ',
+            'up_left_large': 'ㅛ',
+            'up_right_large': 'ㅛ',
+            'left_left_large': 'ㅕ',
+            'left_right_large': 'ㅕ',
+            'down_left_large': 'ㅠ',
+            'down_right_large': 'ㅠ',
+            'up-right_left_large': 'ㅢ',
+            'up-right_right_large': 'ㅢ',
+            'up-left_left_large': 'ㅢ',
+            'up-left_right_large': 'ㅢ',
+            'down-left_left_large': 'ㅢ',
+            'down-left_right_large': 'ㅢ',
+            'down-right_left_large': 'ㅢ',
+            'down-right_right_large': 'ㅢ',
         },
         'multi_transitions_vowel': {
-            'up_left_large_right': 'ㅙ', 
-            'up_left_large_left': 'ㅙ',
+            'up_left_large_right': 'ㅙ',
+            'up_left_large_left': 'ㅙ', // ㅙ는 ㅗ + ㅐ
             'up_right_large_right': 'ㅙ',
             'up_right_large_left': 'ㅙ',
-            'down_left_large_right': 'ㅞ', 
-            'down_left_large_left': 'ㅞ',
-            'down_right_large_right': 'ㅞ', 
+            'down_left_large_right': 'ㅞ',
+            'down_left_large_left': 'ㅞ', // ㅞ는 ㅜ + ㅔ
+            'down_right_large_right': 'ㅞ',
             'down_right_large_left': 'ㅞ',
         }
     };
@@ -125,29 +174,29 @@ document.addEventListener('DOMContentLoaded', () => {
     function getDirectionStringFromAngle(angle) {
         let normalizedAngle = (angle + 360) % 360;
         if (normalizedAngle >= 337.5 || normalizedAngle < 22.5) return 'right';
-        if (normalizedAngle >= 22.5 && normalizedAngle < 67.5) return 'down-right'; 
-        if (normalizedAngle >= 67.5 && normalizedAngle < 112.5) return 'down'; 
-        if (normalizedAngle >= 112.5 && normalizedAngle < 157.5) return 'down-left'; 
-        if (normalizedAngle >= 157.5 && normalizedAngle < 202.5) return 'left'; 
-        if (normalizedAngle >= 202.5 && normalizedAngle < 247.5) return 'up-left'; 
-        if (normalizedAngle >= 247.5 && normalizedAngle < 292.5) return 'up'; 
-        if (normalizedAngle >= 292.5 && normalizedAngle < 337.5) return 'up-right'; 
+        if (normalizedAngle >= 22.5 && normalizedAngle < 67.5) return 'down-right';
+        if (normalizedAngle >= 67.5 && normalizedAngle < 112.5) return 'down';
+        if (normalizedAngle >= 112.5 && normalizedAngle < 157.5) return 'down-left';
+        if (normalizedAngle >= 157.5 && normalizedAngle < 202.5) return 'left';
+        if (normalizedAngle >= 202.5 && normalizedAngle < 247.5) return 'up-left';
+        if (normalizedAngle >= 247.5 && normalizedAngle < 292.5) return 'up';
+        if (normalizedAngle >= 292.5 && normalizedAngle < 337.5) return 'up-right';
         return null;
     }
 
     function getCharFromAngle(angle, type) {
         let normalizedAngle = (angle + 360) % 360;
         const targetDirections = DIRECTIONS[type];
-        if (!targetDirections) return null; 
+        if (!targetDirections) return null;
 
         for (const dirName in targetDirections) {
-            if (targetDirections[dirName].angle) { 
+            if (targetDirections[dirName].angle) {
                 const range = targetDirections[dirName].angle;
-                if (range[0] > range[1]) { 
+                if (range[0] > range[1]) {
                     if (normalizedAngle >= range[0] || normalizedAngle < range[1]) {
                         return targetDirections[dirName].char;
                     }
-                } else { 
+                } else {
                     if (normalizedAngle >= range[0] && normalizedAngle < range[1]) {
                         return targetDirections[dirName].char;
                     }
@@ -171,32 +220,32 @@ document.addEventListener('DOMContentLoaded', () => {
         return diff;
     }
 
-    let isGestureActive = false; 
+    let isGestureActive = false;
 
-    function handleStart(e) { 
-        e.preventDefault(); 
-        isGestureActive = true; 
-        isDragging = false; 
+    function handleStart(e) {
+        e.preventDefault();
+        isGestureActive = true;
+        isDragging = false;
         touchStartTime = Date.now();
-        firstDragAngle = null; 
-        lastSegmentAngle = null; 
-        inputSequence = []; 
+        firstDragAngle = null;
+        lastSegmentAngle = null;
+        inputSequence = [];
 
-        if (e.touches && e.touches.length > 0) { 
+        if (e.touches && e.touches.length > 0) {
             startX = e.touches[0].clientX;
             startY = e.touches[0].clientY;
-        } else { 
+        } else {
             startX = e.clientX;
             startY = e.clientY;
         }
-        prevX = startX; 
+        prevX = startX;
         prevY = startY;
 
         debugOutput.textContent = `제스처 시작 (모드: ${isConsonantModeActive ? '자음' : '모음'}): (${startX.toFixed(0)}, ${startY.toFixed(0)})`;
     }
 
     function handleMove(e) {
-        if (!isGestureActive) return; 
+        if (!isGestureActive) return;
 
         let currentX, currentY;
         if (e.touches && e.touches.length > 0) {
@@ -212,78 +261,77 @@ document.addEventListener('DOMContentLoaded', () => {
         const distFromStart = Math.sqrt(deltaX_start * deltaX_start + deltaY_start * deltaY_start);
 
         if (!isDragging) {
-            if (distFromStart < DRAG_DISTANCE_THRESHOLD) { 
+            if (distFromStart < DRAG_DISTANCE_THRESHOLD) {
                 debugOutput.textContent = `드래그 대기중... 거리: ${distFromStart.toFixed(0)}`;
-                return; 
+                return;
             }
-            isDragging = true; 
-            
+            isDragging = true;
+
             firstDragAngle = Math.atan2(deltaY_start, deltaX_start) * (180 / Math.PI);
             if (firstDragAngle < 0) firstDragAngle += 360;
-            inputSequence.push(getDirectionStringFromAngle(firstDragAngle)); 
-            lastSegmentAngle = firstDragAngle; 
+            inputSequence.push(getDirectionStringFromAngle(firstDragAngle));
+            lastSegmentAngle = firstDragAngle;
 
             debugOutput.textContent = `드래그 시작! 첫 방향: ${inputSequence[0]} (각도: ${firstDragAngle.toFixed(1)}°)`;
         }
 
-        const deltaX_prev = currentX - prevX; 
+        const deltaX_prev = currentX - prevX;
         const deltaY_prev = currentY - prevY;
         const distFromPrev = Math.sqrt(deltaX_prev * deltaX_prev + deltaY_prev * deltaY_prev);
 
-        if (distFromPrev > DRAG_DISTANCE_THRESHOLD / 2) { 
-            let currentSegmentAngle = Math.atan2(deltaY_prev, deltaX_prev) * (180 / Math.PI); // 수정된 부분 확인
+        if (distFromPrev > DRAG_DISTANCE_THRESHOLD / 2) {
+            let currentSegmentAngle = Math.atan2(deltaY_prev, deltaX_prev) * (180 / Math.PI);
             if (currentSegmentAngle < 0) currentSegmentAngle += 360;
 
             if (lastSegmentAngle !== null) {
                 const relativeAngleDiff = getRelativeAngleDifference(lastSegmentAngle, currentSegmentAngle);
                 const absAngleDiff = Math.abs(relativeAngleDiff);
 
-                if (absAngleDiff >= COMMON_MIN_TURN_ANGLE && absAngleDiff <= COMMON_MAX_TURN_ANGLE) { 
-                    let turnDirectionName = null; 
-                    
-                    if (relativeAngleDiff > 0) { 
-                        if (absAngleDiff <= VOWEL_SMALL_TURN_ANGLE_MAX) { 
+                if (absAngleDiff >= COMMON_MIN_TURN_ANGLE && absAngleDiff <= COMMON_MAX_TURN_ANGLE) {
+                    let turnDirectionName = null;
+
+                    if (relativeAngleDiff > 0) {
+                        if (absAngleDiff <= VOWEL_SMALL_TURN_ANGLE_MAX) {
                             turnDirectionName = 'right';
-                        } else { 
+                        } else {
                             turnDirectionName = 'right_large';
                         }
-                    } else { 
-                        if (absAngleDiff <= VOWEL_SMALL_TURN_ANGLE_MAX) { 
+                    } else {
+                        if (absAngleDiff <= VOWEL_SMALL_TURN_ANGLE_MAX) {
                             turnDirectionName = 'left';
-                        } else { 
+                        } else {
                             turnDirectionName = 'left_large';
                         }
                     }
-                    
+
                     if (inputSequence.length === 1 && turnDirectionName) {
-                        inputSequence.push(turnDirectionName); 
+                        inputSequence.push(turnDirectionName);
                         debugOutput.textContent = `방향 전환 감지 (1차): ${inputSequence[0]} -> ${inputSequence[1]} (꺾임: ${relativeAngleDiff.toFixed(1)}°)`;
-                    } 
+                    }
                     else if (inputSequence.length === 2 && turnDirectionName) {
-                        const lastTurnInSequence = inputSequence[inputSequence.length - 1]; 
-                        if (lastTurnInSequence !== turnDirectionName) { 
+                        const lastTurnInSequence = inputSequence[inputSequence.length - 1];
+                        if (lastTurnInSequence !== turnDirectionName) {
                             inputSequence.push(turnDirectionName);
                             debugOutput.textContent = `방향 전환 감지 (2차): ${inputSequence[0]} -> ${inputSequence[1]} -> ${inputSequence[2]} (꺾임: ${relativeAngleDiff.toFixed(1)}°)`;
                         }
                     }
                 }
             }
-            lastSegmentAngle = currentSegmentAngle; 
+            lastSegmentAngle = currentSegmentAngle;
         }
-        
-        prevX = currentX; 
+
+        prevX = currentX;
         prevY = currentY;
     }
 
-    // --- handleEnd 함수 (핵심 수정!) ---
     function handleEnd(e) {
-        if (!isGestureActive) return; 
+        if (!isGestureActive) return;
 
         let endX, endY;
-        if (e.changedTouches && e.changedTouches.length > 0) { 
+        if (e.changedTouches && e.changedTouches.length > 0) {
             endX = e.changedTouches[0].clientX;
             endY = e.changedTouches[0].clientY;
-        } else { 
+        } else {
             endX = e.clientX;
             endY = e.clientY;
         }
@@ -296,38 +344,33 @@ document.addEventListener('DOMContentLoaded', () => {
         let char = null;
         let finalInputType = null;
 
-        // --- 1. '탭' (모드 전환/유지) 감지 ---
-        // (드래그가 없었고, 총 이동 거리가 짧고, 지속 시간도 짧으면 '탭'으로 간주)
+        // --- 1. '탭' 감지 (모음 모드 전환) ---
         if (!isDragging && totalDragDistance < DRAG_DISTANCE_THRESHOLD && duration < TAP_DURATION_THRESHOLD) {
-            // 오빠의 새로운 요구사항:
-            // - 모음모드에서 탭: 자음모드로 전환
-            // - 자음모드에서 탭: 자음모드 유지 (새로운 자음모드 생성 효과)
-            isConsonantModeActive = true; 
-            debugOutput.textContent = `버튼 탭 감지! 모드: 자음으로 전환! (이전 자음 모드는 갱신)`;
-            resetGestureState(); // 탭 제스처 완료 후 상태 초기화 (isConsonantModeActive는 유지)
-            return; 
+            isConsonantModeActive = false; // 탭하면 무조건 모음 모드로 전환
+            debugOutput.textContent = `버튼 탭 감지! 모드: 모음으로 전환! (다음 드래그는 모음 입력)`;
+            resetGestureState();
+            return;
         }
 
         // --- 2. '드래그' (글자 입력) 감지 ---
-        // (탭이 아니고, 드래그 임계값을 넘었거나 드래그 중이었던 경우)
-        if (isDragging || totalDragDistance >= DRAG_DISTANCE_THRESHOLD) { 
+        if (isDragging || totalDragDistance >= DRAG_DISTANCE_THRESHOLD) {
             let finalOverallAngle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
             if (finalOverallAngle < 0) finalOverallAngle += 360;
 
-            finalInputType = isConsonantModeActive ? 'consonant' : 'vowel'; // 현재 모드에 따라 입력 타입 결정
-            
+            finalInputType = isConsonantModeActive ? 'consonant' : 'vowel';
+
             if (inputSequence.length === 1) { // 단일 방향 드래그
-                char = getCharFromAngle(finalOverallAngle, finalInputType); 
+                char = getCharFromAngle(finalOverallAngle, finalInputType);
             } else if (inputSequence.length === 2) { // 1차 꺾임
-                const first8Dir = inputSequence[0];    
-                const turnLRDir = inputSequence[1];    
+                const first8Dir = inputSequence[0];
+                const turnLRDir = inputSequence[1];
                 char = getCharFromDoubleDrag(first8Dir, turnLRDir, finalInputType);
             } else if (inputSequence.length >= 3) { // 2차 이상 꺾임
                 if (finalInputType === 'vowel') { // 2차 꺾임은 모음에만 적용
                     const first8Dir = inputSequence[0];
                     const firstTurn = inputSequence[1];
-                    const secondTurn = inputSequence[2]; 
-                    const key = `${first8Dir}_${firstTurn}_${secondTurn}`; 
+                    const secondTurn = inputSequence[2];
+                    const key = `${first8Dir}_${firstTurn}_${secondTurn}`;
                     char = DIRECTIONS.multi_transitions_vowel[key] || null;
                 } else {
                     char = null; // 자음은 2차 꺾임 없음
@@ -335,24 +378,138 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (char) {
-                kkotipInput.value += char;
-                debugOutput.textContent = `입력 완료 (${finalInputType}): ${char} (총 거리: ${totalDragDistance.toFixed(0)}px, 시퀀스: ${inputSequence.join(' -> ')})`;
+                const charType = getCharType(char);
+                let currentText = kkotipInput.value;
+                let lastChar = currentText.slice(-1);
+                let lastCharIsHangul = (lastChar.charCodeAt(0) >= HANGUL_BASE_CODE && lastChar.charCodeAt(0) < HANGUL_BASE_CODE + CHOSUNG_COUNT * JUNGSUNG_COUNT * JONGSUNG_COUNT);
+
+                if (charType === 'cho') { // 초성 입력
+                    // 이전에 조합 중인 글자가 있거나 마지막 글자가 한글 완성형이라면 확정
+                    if (currentCho !== -1 || currentJung !== -1 || currentJong !== -1 || lastCharIsHangul) {
+                        let combinedChar = combineHangul();
+                        if (combinedChar) {
+                            kkotipInput.value = currentText.slice(0, -1) + combinedChar;
+                        }
+                    }
+                    resetCombination();
+                    currentCho = getCharIndex(char, 'cho');
+                    kkotipInput.value += char; // 임시로 초성만 추가
+                } else if (charType === 'jung') { // 중성 입력
+                    if (currentCho !== -1 && currentJung === -1) { // 초성만 있는 상태에서 중성 입력 (가장 일반적인 조합)
+                        currentJung = getCharIndex(char, 'jung');
+                        kkotipInput.value = currentText.slice(0, -1) + combineHangul();
+                    } else if (currentCho !== -1 && currentJung !== -1 && currentJong === -1) {
+                        // 현재 완성된 초+중 글자에서 중성 변경 또는 복합 중성 생성 시도
+                        // 예: ㅏ -> ㅑ (단일 중성 교체), ㅗ -> ㅗ+ㅏ (ㅘ)
+                        // 현재는 단순 중성 교체만 고려
+                        let prevJungChar = JUNGSUNG[currentJung];
+                        let newJungIndex = -1;
+
+                        // 복합 중성 처리 로직 추가 (예: ㅗ + ㅏ = ㅘ)
+                        if ((prevJungChar === 'ㅗ' && char === 'ㅏ') || (prevJungChar === 'ㅜ' && char === 'ㅓ')) {
+                            if (prevJungChar === 'ㅗ' && char === 'ㅏ') newJungIndex = getCharIndex('ㅘ', 'jung');
+                            if (prevJungChar === 'ㅜ' && char === 'ㅓ') newJungIndex = getCharIndex('ㅝ', 'jung');
+                            // 여기에 다른 복합 모음 조합 추가 가능
+                        }
+
+                        if (newJungIndex !== -1) { // 복합 중성 성공
+                            currentJung = newJungIndex;
+                            kkotipInput.value = currentText.slice(0, -1) + combineHangul();
+                        } else { // 새로운 모음으로 간주 (이전 글자 확정 후 새 글자 시작)
+                             let combinedChar = combineHangul();
+                             if(combinedChar) {
+                                kkotipInput.value = currentText.slice(0, -1) + combinedChar;
+                             }
+                             resetCombination();
+                             currentJung = getCharIndex(char, 'jung');
+                             kkotipInput.value += char; // 새 중성 임시 추가
+                        }
+                    } else { // 초성/중성 없이 중성 단독 입력 (예: 'ㅏ'만 입력)
+                        resetCombination();
+                        currentJung = getCharIndex(char, 'jung');
+                        kkotipInput.value += char;
+                    }
+                } else if (charType === 'jong') { // 종성 입력
+                    if (currentCho !== -1 && currentJung !== -1 && currentJong === -1) { // 초성+중성 상태에서 종성 입력 (가장 일반적인 종성 추가)
+                        currentJong = getCharIndex(char, 'jong');
+                        kkotipInput.value = currentText.slice(0, -1) + combineHangul();
+                    } else if (currentCho !== -1 && currentJung !== -1 && currentJong !== -1) {
+                        // 기존 종성이 있는 상태에서 종성 입력 (겹받침 시도 또는 종성 교체)
+                        let prevJongChar = JONGSUNG[currentJong];
+                        let newJongIndex = -1;
+
+                        // 겹받침 처리 (예: ㄱ + ㅅ = ㄳ)
+                        if ((prevJongChar === 'ㄱ' && char === 'ㅅ') || (prevJongChar === 'ㄴ' && char === 'ㅈ')) {
+                            if (prevJongChar === 'ㄱ' && char === 'ㅅ') newJongIndex = getCharIndex('ㄳ', 'jong');
+                            if (prevJongChar === 'ㄴ' && char === 'ㅈ') newJongIndex = getCharIndex('ㄵ', 'jong');
+                            // 여기에 다른 겹받침 조합 추가 가능
+                        }
+                        // 단일 종성 교체 (새로운 종성이 들어오면 기존 종성을 지우고 새 종성으로 대체)
+                        if (newJongIndex === -1 && getCharIndex(char, 'jong') !== -1) {
+                            // 기존 종성 분리 로직 (예: '값'에서 'ㅂ' 지우고 'ㄹ' 넣으면 '갈')
+                            // 이 부분은 복잡해서 현재는 기존 종성을 지우고 새 종성을 붙이는 방식으로 간소화
+                            let previousCombinedChar = combineHangul(); // 현재까지의 글자 (종성 포함)
+                            let previousCho = currentCho;
+                            let previousJung = currentJung;
+                            let previousJong = currentJong;
+
+                            // 새 종성으로 합쳐질 수 있는지 확인
+                            currentJong = getCharIndex(char, 'jong');
+                            let tryCombine = combineHangul();
+
+                            if (tryCombine) {
+                                kkotipInput.value = currentText.slice(0, -1) + tryCombine;
+                            } else { // 합쳐질 수 없으면 이전 글자 확정하고 새 글자로 시작
+                                kkotipInput.value = currentText.slice(0, -1) + previousCombinedChar;
+                                resetCombination();
+                                kkotipInput.value += char; // 단독 종성으로 추가
+                            }
+                        } else if (newJongIndex !== -1) { // 겹받침 성공
+                            currentJong = newJongIndex;
+                            kkotipInput.value = currentText.slice(0, -1) + combineHangul();
+                        } else { // 새로운 종성이 들어왔지만 겹받침 안될 경우, 이전 글자 확정 후 새 글자로 시작
+                             let combinedChar = combineHangul();
+                             if(combinedChar) {
+                                kkotipInput.value = currentText.slice(0, -1) + combinedChar;
+                             }
+                             resetCombination();
+                             currentCho = getCharIndex(char, 'cho'); // 종성이 초성으로 시작하는 경우
+                             kkotipInput.value += char; // 단독으로 추가
+                        }
+
+                    } else { // 초성/중성 없이 종성 단독 입력 (새로운 글자로 시작)
+                        resetCombination();
+                        currentJong = getCharIndex(char, 'jong'); // 일단 종성으로 저장하지만, 초성이 없으니 한글은 안 됨
+                        kkotipInput.value += char;
+                    }
+                } else { // 한글 자모가 아닌 다른 문자 (예: 숫자, 특수문자 등)
+                    // 현재 조합 중인 글자가 있다면 확정하고 새로운 문자 추가
+                    if (currentCho !== -1 || currentJung !== -1 || currentJong !== -1) {
+                        let combinedChar = combineHangul();
+                        if (combinedChar) {
+                            kkotipInput.value = currentText.slice(0, -1) + combinedChar;
+                        }
+                    }
+                    kkotipInput.value += char;
+                    resetCombination(); // 다른 문자이므로 조합 초기화
+                }
+
+                debugOutput.textContent = `입력 완료 (${finalInputType}): ${char} -> 현재 글자: ${kkotipInput.value.slice(-1)} (총 거리: ${totalDragDistance.toFixed(0)}px, 시퀀스: ${inputSequence.join(' -> ')})`;
             } else {
                 debugOutput.textContent = `입력 실패 (${finalInputType}): 총 거리=${totalDragDistance.toFixed(0)}px, 시퀀스: ${inputSequence.join(' -> ')}`;
             }
         } else {
-            // 드래그도 아니고, 탭도 아닌 짧은 터치(클릭)는 무시 (아무것도 입력하지 않음)
             debugOutput.textContent = `유효한 제스처 아님. (드래그도 탭도 아닌 짧은 터치)`;
         }
-        
-        // --- 드래그로 글자가 입력 완료되면 무조건 '모음 입력 모드'로 전환 (핵심 수정!) ---
-        isConsonantModeActive = false; 
+
+        // 드래그로 글자가 입력 완료되면 무조건 '자음 입력 모드'로 전환 (Default)
+        isConsonantModeActive = true;
         resetGestureState(); // 모든 제스처 완료 후 상태 초기화
     }
 
     // --- 제스처 상태 초기화 함수 ---
     function resetGestureState() {
-        isGestureActive = false; 
+        isGestureActive = false;
         isDragging = false;
         startX = 0;
         startY = 0;
@@ -362,28 +519,24 @@ document.addEventListener('DOMContentLoaded', () => {
         lastSegmentAngle = null;
         inputSequence = [];
         touchStartTime = 0;
-        // isConsonantModeActive는 탭으로만 토글/드래그 완료 시 false로 설정되므로 여기서 건드리지 않음
     }
 
 
     // --- 이벤트 리스너 등록 ---
-    // handleStart를 mainInputButton에 직접 걸어서 터치/드래그 시작 인식
     mainInputButton.addEventListener('touchstart', handleStart, { passive: false });
     mainInputButton.addEventListener('mousedown', handleStart);
 
-    // move, end, cancel 이벤트는 inputButtonContainer 전체에서 감지 (드래그가 버튼 밖으로 벗어나도 감지되도록)
     inputButtonContainer.addEventListener('touchmove', handleMove, { passive: false });
     inputButtonContainer.addEventListener('mousemove', handleMove);
     inputButtonContainer.addEventListener('touchend', handleEnd);
     inputButtonContainer.addEventListener('mouseup', handleEnd);
     inputButtonContainer.addEventListener('touchcancel', handleEnd);
-    inputButtonContainer.addEventListener('mouseleave', (e) => { 
-        if (isGestureActive) { 
-            handleEnd(e); 
+    inputButtonContainer.addEventListener('mouseleave', (e) => {
+        if (isGestureActive) {
+            handleEnd(e);
         }
     });
 
-    // 새로고침 버튼 이벤트 리스너
     refreshButton.addEventListener('click', () => {
         window.location.reload();
     });
