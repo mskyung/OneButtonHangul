@@ -159,8 +159,8 @@ document.addEventListener('DOMContentLoaded', () => {
 	        'right_right': 'ㅒ',
             'up_left': 'ㅚ', // 'ㅗㅣ' 조합
 	        'up_right': 'ㅘ', // 'ㅗㅏ' 조합
-            'left_left': 'ㅔ',
-	        'left_right': 'ㅖ',
+            'left_left': 'ㅖ',
+	        'left_right': 'ㅔ',
             'down_left': 'ㅟ', // 'ㅜㅣ' 조합
 	        'down_right': 'ㅝ', // 'ㅜㅓ' 조합
             'right_left_large': 'ㅑ',
