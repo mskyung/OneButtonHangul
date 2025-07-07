@@ -159,8 +159,8 @@ document.addEventListener('DOMContentLoaded', () => {
             'down-right': { angle: [22.5, 67.5], char: 'ㅡ' }
         },
         'transitions_consonant': {
-            'right_left': 'ㅎ', 'right_right': 'ㅉ',
-            'up_left': 'ㅊ', 'up_right': 'ㅉ',
+            'right_left': 'ㅎ', 'right_right': '.',
+            'up_left': 'ㅊ', 'up_right': 'ㅆ',
             'left_left': 'ㄸ', 'left_right': 'ㅌ',
             'down_left': 'ㅃ', 'down_right': 'ㅍ',
             'up-right_left': 'ㅋ', 'up-right_right': 'ㄲ',
