@@ -147,8 +147,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'transitions_consonant': {
             'right_left': 'ㅎ', 'right_right': '.', // '.' -> 'ㅉ' 로 변경 (임시값 -> 실제 자음으로)
             'up_left': 'ㅊ', 'up_right': 'ㅆ',
-            'left_left': 'ㄸ', 'left_right': 'ㅌ',
-            'down_left': 'ㅃ', 'down_right': 'ㅍ',
+            'left_left': 'ㅌ', 'left_right': 'ㄸ',
+            'down_left': 'ㅍ', 'down_right': 'ㅃ',
             'up-right_left': 'ㅋ', 'up-right_right': 'ㄲ',
             'up-left_left': 'ㅉ', 'up-left_right': 'ㅉ',
             'down-left_left': 'ㄹ', 'down-left_right': 'ㄹ',
