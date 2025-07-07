@@ -36,9 +36,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let inputSequence = []; 
 
     const TAP_DURATION_THRESHOLD = 250; 
-    const DRAG_DISTANCE_THRESHOLD = 15; 
+    const DRAG_DISTANCE_THRESHOLD = 8; 
     
-    const COMMON_MIN_TURN_ANGLE = 10; 
+    // --- 여기 상수들을 조절해 보는 게 중요해요 오빠! ---
+    // 이미지에서 주석 처리된 값으로 변경 (30도 이상 꺾여야 전환으로 인식)
+    const COMMON_MIN_TURN_ANGLE = 30; // 10에서 30으로 변경!
     const COMMON_MAX_TURN_ANGLE = 350; 
 
     const VOWEL_SMALL_TURN_ANGLE_MAX = 135; 
@@ -171,7 +173,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let isGestureActive = false; 
 
-    // --- handleStart 함수 ---
     function handleStart(e) { 
         e.preventDefault(); 
         isGestureActive = true; 
@@ -194,7 +195,6 @@ document.addEventListener('DOMContentLoaded', () => {
         debugOutput.textContent = `제스처 시작 (모드: ${isConsonantModeActive ? '자음' : '모음'}): (${startX.toFixed(0)}, ${startY.toFixed(0)})`;
     }
 
-    // --- handleMove 함수 (변동 없음) ---
     function handleMove(e) {
         if (!isGestureActive) return; 
 
@@ -231,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const distFromPrev = Math.sqrt(deltaX_prev * deltaX_prev + deltaY_prev * deltaY_prev);
 
         if (distFromPrev > DRAG_DISTANCE_THRESHOLD / 2) { 
-            let currentSegmentAngle = Math.atan2(deltaY_prev, deltaY_prev) * (180 / Math.PI); // 이 부분 deltaY_prev, deltaY_prev 이 아니라 deltaY_prev, deltaX_prev 로 변경해야 함
+            let currentSegmentAngle = Math.atan2(deltaY_prev, deltaX_prev) * (180 / Math.PI); // 수정된 부분 확인
             if (currentSegmentAngle < 0) currentSegmentAngle += 360;
 
             if (lastSegmentAngle !== null) {
@@ -299,9 +299,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- 1. '탭' (모드 전환/유지) 감지 ---
         // (드래그가 없었고, 총 이동 거리가 짧고, 지속 시간도 짧으면 '탭'으로 간주)
         if (!isDragging && totalDragDistance < DRAG_DISTANCE_THRESHOLD && duration < TAP_DURATION_THRESHOLD) {
-            isConsonantModeActive = true; // 탭하면 무조건 자음 모드로!
+            // 오빠의 새로운 요구사항:
+            // - 모음모드에서 탭: 자음모드로 전환
+            // - 자음모드에서 탭: 자음모드 유지 (새로운 자음모드 생성 효과)
+            isConsonantModeActive = true; 
             debugOutput.textContent = `버튼 탭 감지! 모드: 자음으로 전환! (이전 자음 모드는 갱신)`;
-            resetGestureState(); // 탭 제스처 완료
+            resetGestureState(); // 탭 제스처 완료 후 상태 초기화 (isConsonantModeActive는 유지)
             return; 
         }
 
