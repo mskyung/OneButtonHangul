@@ -1,18 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
     const kkotipInput = document.getElementById('kkotipInput');
-    const inputButton = document.getElementById('inputButtons');
+    const inputButtonContainer = document.getElementById('inputButtons'); 
+    const mainInputButton = document.getElementById('mainInputButton'); 
+    const refreshButton = document.getElementById('refreshButton'); 
     const debugOutput = document.getElementById('debugOutput');
     const rightHandRadio = document.getElementById('rightHand');
     const leftHandRadio = document.getElementById('leftHand');
 
     function setButtonPosition() {
         if (rightHandRadio.checked) {
-            inputButton.classList.remove('left-hand');
-            inputButton.classList.add('right-hand');
+            inputButtonContainer.classList.remove('left-hand');
+            inputButtonContainer.classList.add('right-hand');
             debugOutput.textContent = '버튼 위치: 오른손잡이';
         } else if (leftHandRadio.checked) {
-            inputButton.classList.remove('right-hand');
-            inputButton.classList.add('left-hand');
+            inputButtonContainer.classList.remove('right-hand');
+            inputButtonContainer.classList.add('left-hand');
             debugOutput.textContent = '버튼 위치: 왼손잡이';
         }
     }
@@ -25,17 +27,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let startY = 0;
     let prevX = 0;
     let prevY = 0;
-    let isDragging = false;
-    let touchStartTime = 0;
-    let isConsonantModeActive = false; // 자음 모드 활성화 (버튼 탭 후)
+    let isDragging = false; 
+    let touchStartTime = 0; 
+    let isConsonantModeActive = false; // 초기 모드: false (모음 입력 모드)
 
-    let firstDragAngle = null;
-    let lastSegmentAngle = null;
+    let firstDragAngle = null; 
+    let lastSegmentAngle = null; 
     let inputSequence = []; 
 
-    // --- 여기 상수들을 다시 한번 조절해 보세요 오빠! ---
-    const TAP_DURATION_THRESHOLD = 250; // ms, 탭으로 인식하는 시간 기준
-    const DRAG_DISTANCE_THRESHOLD = 8; // px, 드래그 시작으로 인식하는 최소 거리 (더 작게!)
+    const TAP_DURATION_THRESHOLD = 250; 
+    const DRAG_DISTANCE_THRESHOLD = 15; 
     
     const COMMON_MIN_TURN_ANGLE = 10; 
     const COMMON_MAX_TURN_ANGLE = 350; 
@@ -89,8 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'left_left': 'ㅔ', 
 	        'left_right': 'ㅖ', 
             'down_left': 'ㅟ', 
-	        'down_right': 'ㅝ',
-
+	        'down_right': 'ㅝ', 
             'right_left_large': 'ㅑ', 
             'right_right_large': 'ㅑ', 
             'up_left_large': 'ㅛ',   
@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'up_right_large_left': 'ㅙ',
             'down_left_large_right': 'ㅞ', 
             'down_left_large_left': 'ㅞ',
-            'down_right_large_right': 'ㅞ',
+            'down_right_large_right': 'ㅞ', 
             'down_right_large_left': 'ㅞ',
         }
     };
@@ -135,16 +135,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getCharFromAngle(angle, type) {
         let normalizedAngle = (angle + 360) % 360;
-        for (const dirName in DIRECTIONS[type]) {
-            if (DIRECTIONS[type][dirName].angle) { 
-                const range = DIRECTIONS[type][dirName].angle;
+        const targetDirections = DIRECTIONS[type];
+        if (!targetDirections) return null; 
+
+        for (const dirName in targetDirections) {
+            if (targetDirections[dirName].angle) { 
+                const range = targetDirections[dirName].angle;
                 if (range[0] > range[1]) { 
                     if (normalizedAngle >= range[0] || normalizedAngle < range[1]) {
-                        return DIRECTIONS[type][dirName].char;
+                        return targetDirections[dirName].char;
                     }
                 } else { 
                     if (normalizedAngle >= range[0] && normalizedAngle < range[1]) {
-                        return DIRECTIONS[type][dirName].char;
+                        return targetDirections[dirName].char;
                     }
                 }
             }
@@ -154,12 +157,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getCharFromDoubleDrag(first8Dir, turnLRDir, type) {
         const key = `${first8Dir}_${turnLRDir}`;
-        if (type === 'consonant') {
-            return DIRECTIONS.transitions_consonant[key] || null;
-        } else if (type === 'vowel') {
-            return DIRECTIONS.transitions_vowel[key] || null; 
-        }
-        return null;
+        const targetTransitions = DIRECTIONS[`transitions_${type}`];
+        if (!targetTransitions) return null;
+        return targetTransitions[key] || null;
     }
 
     function getRelativeAngleDifference(angle1, angle2) {
@@ -169,16 +169,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return diff;
     }
 
-    // --- 새로운 플래그: 현재 유효한 제스처가 시작되었는지 여부 ---
     let isGestureActive = false; 
 
-    // --- handleStart 함수 수정: 이벤트 리스너를 분리하여 터치 범위 제어 ---
-    function handleStartOnButton(e) { // 입력 버튼 위에서 터치/클릭 시작
+    // --- handleStart 함수 ---
+    function handleStart(e) { 
         e.preventDefault(); 
-        isGestureActive = true; // 제스처 활성화
-        isConsonantModeActive = false; // 자음 모드는 handleEnd에서 탭으로 활성화됨
-        
-        isDragging = false;
+        isGestureActive = true; 
+        isDragging = false; 
         touchStartTime = Date.now();
         firstDragAngle = null; 
         lastSegmentAngle = null; 
@@ -194,41 +191,12 @@ document.addEventListener('DOMContentLoaded', () => {
         prevX = startX; 
         prevY = startY;
 
-        debugOutput.textContent = `버튼 제스처 시작: (${startX.toFixed(0)}, ${startY.toFixed(0)})`;
+        debugOutput.textContent = `제스처 시작 (모드: ${isConsonantModeActive ? '자음' : '모음'}): (${startX.toFixed(0)}, ${startY.toFixed(0)})`;
     }
 
-    function handleStartOnBody(e) { // 입력 버튼 밖에서 터치/클릭 시작 (모음 전용)
-        // 버튼 위에서 시작된 터치는 여기서 처리하지 않음 (이벤트 버블링 방지)
-        if (e.target === inputButton || inputButton.contains(e.target)) {
-            return; 
-        }
-        e.preventDefault(); 
-        isGestureActive = true; // 제스처 활성화
-        isConsonantModeActive = false; // 모음 입력은 자음 모드 아님
-        
-        isDragging = false;
-        touchStartTime = Date.now();
-        firstDragAngle = null; 
-        lastSegmentAngle = null; 
-        inputSequence = []; 
-
-        if (e.touches && e.touches.length > 0) { 
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
-        } else { 
-            startX = e.clientX;
-            startY = e.clientY;
-        }
-        prevX = startX; 
-        prevY = startY;
-
-        debugOutput.textContent = `바디 제스처 시작 (모음 후보): (${startX.toFixed(0)}, ${startY.toFixed(0)})`;
-    }
-
-
-    // --- handleMove 함수 수정: isGestureActive 플래그 확인 ---
+    // --- handleMove 함수 (변동 없음) ---
     function handleMove(e) {
-        if (!isGestureActive) return; // 유효한 제스처가 시작되지 않았다면 무시
+        if (!isGestureActive) return; 
 
         let currentX, currentY;
         if (e.touches && e.touches.length > 0) {
@@ -262,9 +230,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const deltaY_prev = currentY - prevY;
         const distFromPrev = Math.sqrt(deltaX_prev * deltaX_prev + deltaY_prev * deltaY_prev);
 
-        // --- 이 부분의 감도를 조절해 보세요 오빠! ---
-        if (distFromPrev > DRAG_DISTANCE_THRESHOLD / 2) { // 이전: DRAG_DISTANCE_THRESHOLD / 2, 더 작은 값(예: 3px)으로 조절 가능
-            let currentSegmentAngle = Math.atan2(deltaY_prev, deltaX_prev) * (180 / Math.PI);
+        if (distFromPrev > DRAG_DISTANCE_THRESHOLD / 2) { 
+            let currentSegmentAngle = Math.atan2(deltaY_prev, deltaY_prev) * (180 / Math.PI); // 이 부분 deltaY_prev, deltaY_prev 이 아니라 deltaY_prev, deltaX_prev 로 변경해야 함
             if (currentSegmentAngle < 0) currentSegmentAngle += 360;
 
             if (lastSegmentAngle !== null) {
@@ -308,9 +275,9 @@ document.addEventListener('DOMContentLoaded', () => {
         prevY = currentY;
     }
 
-    // --- handleEnd 함수 수정: isGestureActive 플래그 초기화 ---
+    // --- handleEnd 함수 (핵심 수정!) ---
     function handleEnd(e) {
-        if (!isGestureActive) return; // 유효한 제스처가 시작되지 않았다면 무시
+        if (!isGestureActive) return; 
 
         let endX, endY;
         if (e.changedTouches && e.changedTouches.length > 0) { 
@@ -329,91 +296,92 @@ document.addEventListener('DOMContentLoaded', () => {
         let char = null;
         let finalInputType = null;
 
-        // 1. inputButton 위에서의 '짧은 탭' 감지 (자음 모드 활성화)
-        // 이 로직은 inputButton에서 시작된 제스처에만 해당됨.
-        // handleStartOnButton을 통해 isGestureActive가 true가 되었고, 아직 drag가 아니어야 함.
-        if ((e.target === inputButton || inputButton.contains(e.target)) && !isDragging && totalDragDistance < DRAG_DISTANCE_THRESHOLD && duration < TAP_DURATION_THRESHOLD) {
-            isConsonantModeActive = true; 
-            debugOutput.textContent = `버튼 탭 감지! 자음 모드 활성화. 다음 드래그는 자음입니다.`;
-            // 제스처는 여기서 끝나므로 isGestureActive는 false로 설정되어야 함
-            isGestureActive = false; 
+        // --- 1. '탭' (모드 전환/유지) 감지 ---
+        // (드래그가 없었고, 총 이동 거리가 짧고, 지속 시간도 짧으면 '탭'으로 간주)
+        if (!isDragging && totalDragDistance < DRAG_DISTANCE_THRESHOLD && duration < TAP_DURATION_THRESHOLD) {
+            isConsonantModeActive = true; // 탭하면 무조건 자음 모드로!
+            debugOutput.textContent = `버튼 탭 감지! 모드: 자음으로 전환! (이전 자음 모드는 갱신)`;
+            resetGestureState(); // 탭 제스처 완료
             return; 
         }
 
-        // 2. 유효한 '드래그' 제스처 처리 (isDragging이 true이거나, 총 거리가 임계값 이상인 경우)
+        // --- 2. '드래그' (글자 입력) 감지 ---
+        // (탭이 아니고, 드래그 임계값을 넘었거나 드래그 중이었던 경우)
         if (isDragging || totalDragDistance >= DRAG_DISTANCE_THRESHOLD) { 
             let finalOverallAngle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
             if (finalOverallAngle < 0) finalOverallAngle += 360;
 
-            // 입력 타입 결정: 자음 모드 활성화 여부에 따라
-            // 주의: handleStartOnBody로 시작된 제스처는 isConsonantModeActive가 항상 false임.
-            if (isConsonantModeActive) { // 자음 모드 (버튼 탭 후 시작된 드래그)
-                finalInputType = 'consonant';
-                if (inputSequence.length === 1) { // 1차 드래그 (단일 방향)
-                    char = getCharFromAngle(finalOverallAngle, 'consonant'); 
-                } else if (inputSequence.length === 2) { // 2차 드래그 (1회 꺾임)
-                    const first8Dir = inputSequence[0];    
-                    const turnLRDir = inputSequence[1];    
-                    char = getCharFromDoubleDrag(first8Dir, turnLRDir, 'consonant');
-                } else if (inputSequence.length >= 3) { // 3차 드래그 (2회 이상 꺾임)
-                    // 자음은 2회 꺾임을 사용하지 않으므로, char는 null
-                    char = null; 
-                }
-            } else { // 모음 모드 (버튼 밖에서 시작된 드래그 또는 버튼 탭 없이 바로 드래그)
-                finalInputType = 'vowel';
-                if (inputSequence.length === 1) { // 1차 드래그 (단일 방향)
-                    char = getCharFromAngle(finalOverallAngle, 'vowel'); 
-                } else if (inputSequence.length === 2) { // 2차 드래그 (1회 꺾임)
-                    const first8Dir = inputSequence[0];    
-                    const turnLRDir = inputSequence[1];    
-                    char = getCharFromDoubleDrag(first8Dir, turnLRDir, 'vowel');
-                } else if (inputSequence.length >= 3) { // 3차 드래그 (2회 이상 꺾임)
+            finalInputType = isConsonantModeActive ? 'consonant' : 'vowel'; // 현재 모드에 따라 입력 타입 결정
+            
+            if (inputSequence.length === 1) { // 단일 방향 드래그
+                char = getCharFromAngle(finalOverallAngle, finalInputType); 
+            } else if (inputSequence.length === 2) { // 1차 꺾임
+                const first8Dir = inputSequence[0];    
+                const turnLRDir = inputSequence[1];    
+                char = getCharFromDoubleDrag(first8Dir, turnLRDir, finalInputType);
+            } else if (inputSequence.length >= 3) { // 2차 이상 꺾임
+                if (finalInputType === 'vowel') { // 2차 꺾임은 모음에만 적용
                     const first8Dir = inputSequence[0];
                     const firstTurn = inputSequence[1];
                     const secondTurn = inputSequence[2]; 
                     const key = `${first8Dir}_${firstTurn}_${secondTurn}`; 
                     char = DIRECTIONS.multi_transitions_vowel[key] || null;
+                } else {
+                    char = null; // 자음은 2차 꺾임 없음
                 }
             }
 
             if (char) {
                 kkotipInput.value += char;
-                debugOutput.textContent = `입력 완료 (${finalInputType || 'N/A'}): ${char} (총 거리: ${totalDragDistance.toFixed(0)}px, 시퀀스: ${inputSequence.join(' -> ')})`;
+                debugOutput.textContent = `입력 완료 (${finalInputType}): ${char} (총 거리: ${totalDragDistance.toFixed(0)}px, 시퀀스: ${inputSequence.join(' -> ')})`;
             } else {
-                debugOutput.textContent = `입력 실패 (${finalInputType || 'N/A'}): 총 거리=${totalDragDistance.toFixed(0)}px, 시퀀스: ${inputSequence.join(' -> ')}`;
+                debugOutput.textContent = `입력 실패 (${finalInputType}): 총 거리=${totalDragDistance.toFixed(0)}px, 시퀀스: ${inputSequence.join(' -> ')}`;
             }
         } else {
-            debugOutput.textContent = `유효한 제스처 아님. (탭이 아니거나 너무 짧은 드래그)`;
+            // 드래그도 아니고, 탭도 아닌 짧은 터치(클릭)는 무시 (아무것도 입력하지 않음)
+            debugOutput.textContent = `유효한 제스처 아님. (드래그도 탭도 아닌 짧은 터치)`;
         }
         
-        // --- 모든 제스처 종료 시 상태 초기화 ---
-        isGestureActive = false; // 제스처 비활성화
+        // --- 드래그로 글자가 입력 완료되면 무조건 '모음 입력 모드'로 전환 (핵심 수정!) ---
+        isConsonantModeActive = false; 
+        resetGestureState(); // 모든 제스처 완료 후 상태 초기화
+    }
+
+    // --- 제스처 상태 초기화 함수 ---
+    function resetGestureState() {
+        isGestureActive = false; 
         isDragging = false;
+        startX = 0;
+        startY = 0;
+        prevX = 0;
+        prevY = 0;
         firstDragAngle = null;
         lastSegmentAngle = null;
         inputSequence = [];
-        isConsonantModeActive = false; // 자음 모드 사용했으니 비활성화 (탭으로만 활성화되도록)
+        touchStartTime = 0;
+        // isConsonantModeActive는 탭으로만 토글/드래그 완료 시 false로 설정되므로 여기서 건드리지 않음
     }
 
-    // --- 이벤트 리스너 등록 수정! ---
-    // inputButton에서는 시작 이벤트만 감지
-    inputButton.addEventListener('touchstart', handleStartOnButton, { passive: false });
-    inputButton.addEventListener('mousedown', handleStartOnButton);
 
-    // document.body에서는 inputButton 외의 영역에서 시작하는 이벤트를 감지
-    document.body.addEventListener('touchstart', handleStartOnBody, { passive: false });
-    document.body.addEventListener('mousedown', handleStartOnBody);
+    // --- 이벤트 리스너 등록 ---
+    // handleStart를 mainInputButton에 직접 걸어서 터치/드래그 시작 인식
+    mainInputButton.addEventListener('touchstart', handleStart, { passive: false });
+    mainInputButton.addEventListener('mousedown', handleStart);
 
-    // move, end, cancel 이벤트는 document.body 전체에서 감지
-    document.body.addEventListener('touchmove', handleMove, { passive: false });
-    document.body.addEventListener('touchend', handleEnd);
-    document.body.addEventListener('touchcancel', handleEnd); 
-
-    document.body.addEventListener('mousemove', handleMove);
-    document.body.addEventListener('mouseup', handleEnd);
-    document.body.addEventListener('mouseleave', (e) => { 
-        if (isGestureActive) { // 현재 활성화된 제스처가 있다면 종료 처리
+    // move, end, cancel 이벤트는 inputButtonContainer 전체에서 감지 (드래그가 버튼 밖으로 벗어나도 감지되도록)
+    inputButtonContainer.addEventListener('touchmove', handleMove, { passive: false });
+    inputButtonContainer.addEventListener('mousemove', handleMove);
+    inputButtonContainer.addEventListener('touchend', handleEnd);
+    inputButtonContainer.addEventListener('mouseup', handleEnd);
+    inputButtonContainer.addEventListener('touchcancel', handleEnd);
+    inputButtonContainer.addEventListener('mouseleave', (e) => { 
+        if (isGestureActive) { 
             handleEnd(e); 
         }
+    });
+
+    // 새로고침 버튼 이벤트 리스너
+    refreshButton.addEventListener('click', () => {
+        window.location.reload();
     });
 });

@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>꽃잎한글 입력기</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -15,14 +15,14 @@
     <div id="controlPanel">
         <div class="hand-selection">
             <input type="radio" id="leftHand" name="handOption" value="left">
-            <label for="leftHand">왼손잡이</label>
-            <input type="radio" id="rightHand" name="handOption" value="right" checked>
+            <label for="leftHand">왼손잡이</label>            
+			<input type="radio" id="rightHand" name="handOption" value="right" checked>
             <label for="rightHand">오른손잡이</label>
         </div>
     </div>
     
     <div id="inputButtons">
-        <button id="rightButton" class="input-button">
+        <button id="mainInputButton" class="input-button">
             <div class="lines">
                  <span class="line-22-5"></span>
                  <span class="line-67-5"></span>
@@ -32,6 +32,7 @@
         </button>
     </div>
 
+    <button id="refreshButton" style="margin-top: 20px; padding: 10px 20px; font-size: 1.1em;">새로고침</button>
     <div id="debugOutput"></div> 
 
     <script src="script.js"></script>
