@@ -9,8 +9,8 @@ body {
     margin: 0 auto;
     max-width: 960px;
     box-sizing: border-box;
-    position: relative; 
-    min-height: 100vh; 
+    position: relative;
+    min-height: 100vh;
 }
 
 h1 {
@@ -33,14 +33,14 @@ textarea#kkotipInput {
     color: #333;
     width: 400px;
     height: 400px; /* PC에서는 정사각형 */
-    max-width: 90%; 
-    min-height: 200px; 
+    max-width: 90%;
+    min-height: 200px;
     box-sizing: border-box;
     border: 1px solid #ccc;
     padding: 10px;
     resize: vertical;
     display: block;
-    margin: 20px auto; 
+    margin: 20px auto;
 }
 
 /* 오른손/왼손 선택 패널 스타일 */
@@ -60,10 +60,10 @@ textarea#kkotipInput {
     border-radius: 8px;
     border: 1px solid #eee;
     display: flex;
-    justify-content: center; 
+    justify-content: center;
     align-items: center;
-    flex-wrap: wrap; 
-    gap: 15px; 
+    flex-wrap: wrap;
+    gap: 15px;
     box-sizing: border-box; /* 패딩 포함 너비 계산 */
     margin: 0; /* fixed 요소는 마진이 필요 없음 */
 }
@@ -78,8 +78,8 @@ textarea#kkotipInput {
 
 .hand-selection input[type="radio"] {
     margin-right: 5px;
-    accent-color: #4CAF50; 
-    width: 18px; 
+    accent-color: #4CAF50;
+    width: 18px;
     height: 18px;
 }
 
@@ -95,51 +95,51 @@ textarea#kkotipInput {
     bottom: 20px;    /* 아래에서 20px 떨어지게 */
     right: 20px;     /* 기본은 오른쪽에 고정되도록 설정 */
     z-index: 1000;   /* !!! controlPanel보다 낮은 z-index로 controlPanel 아래에 보임 !!! */
-    display: flex; 
+    display: flex;
     justify-content: center;
     align-items: center;
-    width: auto; 
+    width: auto;
 }
 
 /* 기본적으로 오른손잡이 위치 (우측 하단) */
 #inputButtons.right-hand {
-    left: auto; 
-    right: 20px; 
+    left: auto;
+    right: 20px;
 }
 
 /* 왼손잡이 위치 (좌측 하단) */
 #inputButtons.left-hand {
     left: 20px;
-    right: auto; 
+    right: auto;
 }
 
 /* 개별 입력 버튼 스타일 */
 .input-button {
-    width: 150px; /* PC에서 고정 너비 */
-    height: 150px; /* PC에서 고정 높이 (정사각형) */
+    width: 200px; /* PC에서 고정 너비 - 150px -> 200px로 증가 */
+    height: 200px; /* PC에서 고정 높이 (정사각형) - 150px -> 200px로 증가 */
     min-width: 100px; /* 최소 너비 (모바일) */
     min-height: 100px; /* 최소 높이 (모바일, 정사각형 유지) */
-    max-width: 40vw; /* 최대 너비 (모바일 화면에 맞춰짐) */
-    max-height: 40vw; /* 최대 높이 (모바일 화면에 맞춰 정사각형 비율 유지) */
+    max-width: 50vw; /* 최대 너비 (모바일 화면에 맞춰짐) - 40vw -> 50vw로 증가 */
+    max-height: 50vw; /* 최대 높이 (모바일 화면에 맞춰 정사각형 비율 유지) - 40vw -> 50vw로 증가 */
     padding: 0;
-    font-size: 1.5em; 
-    background-color: #f0f8f4; 
+    font-size: 1.5em;
+    background-color: #f0f8f4;
     border: 2px solid #4CAF50;
     border-radius: 15px;
     cursor: pointer;
     touch-action: none;
     user-select: none;
-    position: relative; 
+    position: relative;
     overflow: hidden;
     box-sizing: border-box;
     display: flex;
     justify-content: center;
     align-items: center;
     text-align: center;
-    flex-shrink: 0; 
-    flex-grow: 0;   
+    flex-shrink: 0;
+    flex-grow: 0;
     margin: 5px;
-    color: #388e3c; 
+    color: #388e3c;
 }
 
 .input-button:active {
@@ -150,8 +150,8 @@ textarea#kkotipInput {
 .input-button .lines {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    z-index: 1; 
-    pointer-events: none; 
+    z-index: 1;
+    pointer-events: none;
 }
 
 /* !!!! 8개의 각도별 선 그리기 (공통 스타일) !!!! */
@@ -160,10 +160,10 @@ textarea#kkotipInput {
     top: 50%;
     left: 0;
     width: 100%;
-    height: 1px; 
-    background-color: rgba(0,0,0,0.1); 
+    height: 1px;
+    background-color: rgba(0,0,0,0.1);
     transform-origin: center center;
-    transform: translateY(-50%); 
+    transform: translateY(-50%);
 }
 
 /* 각도별 선 스타일 */
@@ -222,7 +222,7 @@ button#refreshButton:active {
         height: auto;
         min-height: 200px;
         font-size: 1.3em;
-        margin-bottom: 20px; 
+        margin-bottom: 20px;
     }
 
     /* 입력 버튼 컨테이너 */
@@ -235,13 +235,13 @@ button#refreshButton:active {
     #inputButtons.left-hand {
         left: 10px; /* 모바일 왼쪽 여백 */
     }
-    
+
     .input-button {
-        width: 40vw; /* 모바일에서 조금 작게 */
-        height: 40vw; /* 모바일에서 조금 작게 */
-        font-size: 1em;
+        width: 60vw; /* 모바일에서 40vw -> 60vw로 더 크게 */
+        height: 60vw; /* 모바일에서 40vw -> 60vw로 더 크게 */
+        font-size: 1.2em; /* 폰트도 살짝 키워줄게요 */
     }
-    
+
     button#refreshButton {
         font-size: 1em;
         padding: 8px 15px;
@@ -267,11 +267,11 @@ button#refreshButton:active {
     }
 
     .input-button {
-        width: 45vw; /* 여전히 45vw 유지 */
-        height: 45vw;
-        font-size: 1em;
+        width: 70vw; /* 아주 작은 모바일에서 45vw -> 70vw로 더 크게 */
+        height: 70vw; /* 아주 작은 모바일에서 45vw -> 70vw로 더 크게 */
+        font-size: 1.1em;
     }
-    
+
     button#refreshButton {
         font-size: 0.9em;
         padding: 6px 12px;
