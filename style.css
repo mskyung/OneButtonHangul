@@ -88,7 +88,6 @@ textarea#kkotipInput {
     padding: 5px 0;
 }
 
-
 /* 입력 버튼 컨테이너 */
 #inputButtons {
     position: fixed; /* !!! 화면에 고정 !!! */
@@ -115,12 +114,12 @@ textarea#kkotipInput {
 
 /* 개별 입력 버튼 스타일 */
 .input-button {
-    width: 100px; /* PC에서 고정 너비 - 150px -> 200px로 증가 */
-    height: 100px; /* PC에서 고정 높이 (정사각형) - 150px -> 200px로 증가 */
+    width: 200px; /* PC에서 고정 너비 - 150px -> 200px로 증가 */
+    height: 200px; /* PC에서 고정 높이 (정사각형) - 150px -> 200px로 증가 */
     min-width: 100px; /* 최소 너비 (모바일) */
     min-height: 100px; /* 최소 높이 (모바일, 정사각형 유지) */
-    max-width: 35vw; /* 최대 너비 (모바일 화면에 맞춰짐) - 40vw -> 50vw로 증가 */
-    max-height: 35vw; /* 최대 높이 (모바일 화면에 맞춰 정사각형 비율 유지) - 40vw -> 50vw로 증가 */
+    max-width: 50vw; /* 최대 너비 (모바일 화면에 맞춰짐) - 40vw -> 50vw로 증가 */
+    max-height: 50vw; /* 최대 높이 (모바일 화면에 맞춰 정사각형 비율 유지) - 40vw -> 50vw로 증가 */
     padding: 0;
     font-size: 1.5em;
     background-color: #f0f8f4;
@@ -184,7 +183,26 @@ textarea#kkotipInput {
     border-radius: 50%; /* 원 모양으로 */
     z-index: 2; /* 선들 위에 오도록 */
     border: 1px solid rgba(0,0,0,0.1); /* 원의 테두리 추가 */
+	transition: transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.2s ease-out; /* 부드러운 전환 효과 추가 */
 }
+
+/* 외부 드래그 시작 시 (자음 모드) - 원 숨김 */
+/*.input-button.consonant-mode .center-circle {
+    opacity: 0;  원을 투명하게 만듦 
+    transform: translate(-50%, -50%) scale(0.5); 
+}*/
+
+/* 내부 드래그 시작 시 (모음 모드) - 원 확장 
+.input-button.vowel-mode .center-circle {
+    width: 100%;  버튼 전체 크기로 확장 
+    height: 100%;  버튼 전체 크기로 확장 
+    border-radius: 15px;  사각형 버튼과 동일한 둥근 모서리 
+    opacity: 0.2;  살짝 투명하게 해서 아래 선이 보이도록 
+    background-color: #dcedc8;  모음 모드일 때 색상 변경 
+    border: none;  확장될 때는 테두리 제거 
+    transform: translate(-50%, -50%) scale(1);  원래 크기로 
+}*/
+
 
 /* Refresh 버튼 컨테이너 (현재 HTML에 없음, 필요시 추가) */
 div#controls {
@@ -251,8 +269,8 @@ button#refreshButton:active {
     }
 
     .input-button {
-        width: 50vw; /* 모바일에서 40vw -> 60vw로 더 크게 */
-        height: 50vw; /* 모바일에서 40vw -> 60vw로 더 크게 */
+        width: 60vw; /* 모바일에서 40vw -> 60vw로 더 크게 */
+        height: 60vw; /* 모바일에서 40vw -> 60vw로 더 크게 */
         font-size: 1.2em; /* 폰트도 살짝 키워줄게요 */
     }
 
@@ -286,14 +304,14 @@ button#refreshButton:active {
     }
 
     .input-button {
-        width: 60vw; /* 아주 작은 모바일에서 45vw -> 70vw로 더 크게 */
-        height: 60vw; /* 아주 작은 모바일에서 45vw -> 70vw로 더 크게 */
+        width: 70vw; /* 아주 작은 모바일에서 45vw -> 70vw로 더 크게 */
+        height: 70vw; /* 아주 작은 모바일에서 45vw -> 70vw로 더 크게 */
         font-size: 1.1em;
     }
 
     .input-button .center-circle {
-        width: 50%; /* 아주 작은 모바일에서 원 크기 조정 */
-        height: 50%; /* 아주 작은 모바일에서 원 크기 조정 */
+        width: 60%; /* 아주 작은 모바일에서 원 크기 조정 */
+        height: 60%; /* 아주 작은 모바일에서 원 크기 조정 */
     }
 
     button#refreshButton {

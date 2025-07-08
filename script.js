@@ -1,12 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
     const kkotipInput = document.getElementById('kkotipInput');
     const inputButtonContainer = document.getElementById('inputButtons');
-    const mainInputButton = document.getElementById('mainInputButton');
+    const mainInputButton = document.getElementById('mainInputButton'); // 이 변수가 이미 선언되어 있네!
     const refreshButton = document.getElementById('refreshButton');
     const debugOutput = document.getElementById('debugOutput');
     const rightHandRadio = document.getElementById('rightHand');
     const leftHandRadio = document.getElementById('leftHand');
-
+    	
     function setButtonPosition() {
         if (rightHandRadio.checked) {
             inputButtonContainer.classList.remove('left-hand');
@@ -29,7 +29,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let prevY = 0;
     let isDragging = false;
     let touchStartTime = 0;
-    let isConsonantModeActive = true; // 초기 모드: true (자음 입력 모드)
+    // isConsonantModeActive 변수는 이제 handleStart에서 초기화될 거야.
+    let isConsonantModeActive = true; // // 이 부분은 handleStart에서 터치 위치에 따라 동적으로 설정되도록 변경할 예정이야.
+
 
     let firstDragAngle = null;
     let lastSegmentAngle = null;
@@ -265,17 +267,53 @@ document.addEventListener('DOMContentLoaded', () => {
         firstDragAngle = null;
         lastSegmentAngle = null;
         inputSequence = [];
-
+		
+		let clientX, clientY;
         if (e.touches && e.touches.length > 0) {
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
+            clientX = e.touches[0].clientX;
+			clientY = e.touches[0].clientY;
         } else {
-            startX = e.clientX;
-            startY = e.clientY;
+            clientX = e.clientX;
+			clientY = e.clientY;
         }
-        prevX = startX;
+        startX = clientX; // 이제 startX, startY에 제대로 값이 들어갈 거야!
+        startY = clientY; //
+		prevX = startX;
         prevY = startY;
+		
+		// --- 오빠의 새 로직 적용 시작! ---
+        const buttonRect = mainInputButton.getBoundingClientRect(); // 버튼의 위치와 크기 정보 가져오기
+        const centerX = buttonRect.left + buttonRect.width / 2;
+        const centerY = buttonRect.top + buttonRect.height / 2;
+        
+        // 원의 반지름 (style.css의 .center-circle width: 40% 기준으로 계산)
+        // 나중에 모바일 미디어 쿼리까지 고려하면 더 정확한 계산이 필요하지만, 일단 PC 기준 40%로
+        // CSS에서 원 크기를 %로 설정했으니, 버튼 크기에 따라 상대적으로 계산해야 해.
+        // 현재 CSS에서 .center-circle의 width/height가 40% (PC) 또는 50% (모바일)로 설정되어 있어.
+        // 여기서는 가장 큰 값인 50%를 기준으로 안전하게 0.25 (반지름 = 지름/2, 지름 = 버튼의 50%이므로 버튼 폭의 25%)로 잡을게.
+        // 정확히는 CSS를 파싱해서 가져와야 하지만, 일단 하드코딩으로 가정.
+        const circleRadiusRatio = 0.25; // 버튼 너비/높이의 25%가 원의 반지름 (지름 50%의 절반)
+        const circleRadius = Math.min(buttonRect.width, buttonRect.height) * circleRadiusRatio;
 
+        const distanceToCenter = Math.sqrt(
+            Math.pow(clientX - centerX, 2) + Math.pow(clientY - centerY, 2)
+        );
+
+        // 원 내부에서 시작했는지 판단
+        const isInsideCircle = distanceToCenter <= circleRadius;
+        
+        // isConsonantModeActive 값 설정
+        isConsonantModeActive = !isInsideCircle; // 원 밖에서 시작하면 자음 모드, 원 안에서 시작하면 모음 모드
+
+        // 시각적 피드백을 위한 클래스 추가/제거
+        if (isConsonantModeActive) {
+            mainInputButton.classList.add('consonant-mode');
+            mainInputButton.classList.remove('vowel-mode');
+        } else {
+            mainInputButton.classList.add('vowel-mode');
+            mainInputButton.classList.remove('consonant-mode');
+        }
+		
         debugOutput.textContent = `제스처 시작 (모드: ${isConsonantModeActive ? '자음' : '모음'}): (${startX.toFixed(0)}, ${startY.toFixed(0)})`;
     }
 
@@ -375,18 +413,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const deltaY = endY - startY;
         const totalDragDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         const duration = Date.now() - touchStartTime;
-
+		
+		// --- 탭으로 인한 모드 전환 로직은 위 handleStart로 이동했으니,
+        // 이곳에서는 유효한 드래그가 아닐 경우만 처리하면 돼.
+        if (!isDragging || totalDragDistance < DRAG_DISTANCE_THRESHOLD) { // 드래그 시작 조건 불충족 시 (짧은 터치 등)
+             debugOutput.textContent = `유효한 제스처 아님. (드래그 거리 부족)`;
+             resetGestureState();
+             return;
+        }		
+		
         let char = null;
         let finalInputType = isConsonantModeActive ? 'consonant' : 'vowel'; // 현재 모드에 따라 입력 타입 결정
 
         // --- 1. '탭' 감지 (모음 모드 전환) ---
-        if (!isDragging && totalDragDistance < DRAG_DISTANCE_THRESHOLD && duration < TAP_DURATION_THRESHOLD) {
-            isConsonantModeActive = false; // 탭하면 무조건 모음 모드로 전환
-            debugOutput.textContent = `버튼 탭 감지! 모드: 모음으로 전환! (다음 드래그는 모음 입력)`;
-            resetGestureState();
-            return;
-        }
-
+        //if (!isDragging && totalDragDistance < DRAG_DISTANCE_THRESHOLD && duration < TAP_DURATION_THRESHOLD) {
+        //    isConsonantModeActive = false; // 탭하면 무조건 모음 모드로 전환
+        //    debugOutput.textContent = `버튼 탭 감지! 모드: 모음으로 전환! (다음 드래그는 모음 입력)`;
+        //    resetGestureState();
+        //    return;
+        //}
+		
+		// 드래그로 글자가 입력 완료되면, 다음 제스처를 위해 버튼 클래스 초기화
+        mainInputButton.classList.remove('consonant-mode', 'vowel-mode');		
+		
         // --- 2. '드래그' (글자 입력) 감지 ---
         if (isDragging || totalDragDistance >= DRAG_DISTANCE_THRESHOLD) {
             let finalOverallAngle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
@@ -581,6 +630,9 @@ document.addEventListener('DOMContentLoaded', () => {
         lastSegmentAngle = null;
         inputSequence = [];
         touchStartTime = 0;
+		
+		// 제스처가 끝나면 버튼의 시각적 상태도 초기화
+        mainInputButton.classList.remove('consonant-mode', 'vowel-mode');
     }
 
 
