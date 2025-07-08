@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return null; // 겹받침이 아니거나 찾을 수 없음
     }
 
-    const TAP_DURATION_THRESHOLD = 200;
+    const TAP_DURATION_THRESHOLD = 250;
     const DRAG_DISTANCE_THRESHOLD = 8;
 
     const COMMON_MIN_TURN_ANGLE = 15;
