@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const kkotipInput = document.getElementById('kkotipInput');
     const inputButtonContainer = document.getElementById('inputButtons');
-    const mainInputButton = document.getElementById('mainInputButton'); // 이 변수가 이미 선언되어 있네!
+    const mainInputButton = document.getElementById('mainInputButton');
     const refreshButton = document.getElementById('refreshButton');
     const debugOutput = document.getElementById('debugOutput');
     const rightHandRadio = document.getElementById('rightHand');
@@ -29,13 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let prevY = 0;
     let isDragging = false;
     let touchStartTime = 0;
-    // isConsonantModeActive 변수는 이제 handleStart에서 초기화될 거야.
-    let isConsonantModeActive = true; // // 이 부분은 handleStart에서 터치 위치에 따라 동적으로 설정되도록 변경할 예정이야.
-
+    let isConsonantModeActive = true; 
 
     let firstDragAngle = null;
     let lastSegmentAngle = null;
     let inputSequence = [];
+    let initialRecognizedDirection = null; // 새로 추가: 처음 인식된 8방향 저장
 
     // --- 한글 조합 관련 변수들 ---
     let currentCho = -1; // 현재 조합 중인 초성 인덱스
@@ -124,9 +123,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const TAP_DURATION_THRESHOLD = 250;
-    const DRAG_DISTANCE_THRESHOLD = 8;
+    const DRAG_DISTANCE_THRESHOLD = 15;
 
-    const COMMON_MIN_TURN_ANGLE = 15;
+    const COMMON_MIN_TURN_ANGLE = 30; // 20도 정도의 휘어짐을 직선으로 인식하기 위해 설정
     const COMMON_MAX_TURN_ANGLE = 350;
 
     const VOWEL_SMALL_TURN_ANGLE_MAX = 135;
@@ -143,11 +142,11 @@ document.addEventListener('DOMContentLoaded', () => {
         'consonant': {
             'right': { angle: [337.5, 22.5], char: 'ㄷ' },
             'up-right': { angle: [292.5, 337.5], char: 'ㄴ' },
-            'up': { angle: [247.5, 292.5], char: 'ㅅ' },
+            'up': { angle: [247.5, 292.5], char: 'ㅂ' },
             'up-left': { angle: [202.5, 247.5], char: 'ㅁ' },
             'left': { angle: [157.5, 202.5], char: 'ㅇ' },
             'down-left': { angle: [112.5, 157.5], char: 'ㄱ' },
-            'down': { angle: [67.5, 112.5], char: 'ㅂ' },
+            'down': { angle: [67.5, 112.5], char: 'ㅅ' },
             'down-right': { angle: [22.5, 67.5], char: 'ㅈ' }
         },
         'vowel': {
@@ -161,10 +160,10 @@ document.addEventListener('DOMContentLoaded', () => {
             'down-right': { angle: [22.5, 67.5], char: 'ㅡ' }
         },
         'transitions_consonant': {
-            'right_left': 'ㅌ', 'right_right': 'ㄸ',
-            'up_left': 'ㅍ', 'up_right': 'ㅃ',
-            'left_left': '.', 'left_right': 'ㅎ',
-            'down_left': 'ㅆ', 'down_right': 'ㅊ',
+            'right_left': 'ㄸ', 'right_right': 'ㅌ',
+            'up_left': 'ㅃ', 'up_right': 'ㅍ',
+            'left_left': 'ㅎ', 'left_right': '.',
+            'down_left': 'ㅊ', 'down_right': 'ㅆ',
             'up-right_left': 'ㄹ', 'up-right_right': 'ㄹ',
             'up-left_left': 'ㅁ', 'up-left_right': 'ㅁ',
             'down-left_left': 'ㅋ', 'down-left_right': 'ㄲ',
@@ -258,6 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let isGestureActive = false;
+	//let initialRecognizedDirection = null; // 새로 추가: 처음 인식된 8방향 저장
 
     function handleStart(e) {
         e.preventDefault();
@@ -267,54 +267,36 @@ document.addEventListener('DOMContentLoaded', () => {
         firstDragAngle = null;
         lastSegmentAngle = null;
         inputSequence = [];
-		
-		let clientX, clientY;
+        initialRecognizedDirection = null; // 초기화
+
+        let clientX, clientY;
         if (e.touches && e.touches.length > 0) {
             clientX = e.touches[0].clientX;
-			clientY = e.touches[0].clientY;
+            clientY = e.touches[0].clientY;
         } else {
             clientX = e.clientX;
-			clientY = e.clientY;
+            clientY = e.clientY;
         }
-        startX = clientX; // 이제 startX, startY에 제대로 값이 들어갈 거야!
-        startY = clientY; //
-		prevX = startX;
+        startX = clientX;
+        startY = clientY;
+        prevX = startX;
         prevY = startY;
-		
-		// --- 오빠의 새 로직 적용 시작! ---
-        const buttonRect = mainInputButton.getBoundingClientRect(); // 버튼의 위치와 크기 정보 가져오기
+
+        const buttonRect = mainInputButton.getBoundingClientRect();
         const centerX = buttonRect.left + buttonRect.width / 2;
         const centerY = buttonRect.top + buttonRect.height / 2;
-        
-        // 원의 반지름 (style.css의 .center-circle width: 40% 기준으로 계산)
-        // 나중에 모바일 미디어 쿼리까지 고려하면 더 정확한 계산이 필요하지만, 일단 PC 기준 40%로
-        // CSS에서 원 크기를 %로 설정했으니, 버튼 크기에 따라 상대적으로 계산해야 해.
-        // 현재 CSS에서 .center-circle의 width/height가 40% (PC) 또는 50% (모바일)로 설정되어 있어.
-        // 여기서는 가장 큰 값인 50%를 기준으로 안전하게 0.25 (반지름 = 지름/2, 지름 = 버튼의 50%이므로 버튼 폭의 25%)로 잡을게.
-        // 정확히는 CSS를 파싱해서 가져와야 하지만, 일단 하드코딩으로 가정.
-        const circleRadiusRatio = 0.25; // 버튼 너비/높이의 25%가 원의 반지름 (지름 50%의 절반)
+
+        const circleRadiusRatio = 0.25;
         const circleRadius = Math.min(buttonRect.width, buttonRect.height) * circleRadiusRatio;
 
         const distanceToCenter = Math.sqrt(
             Math.pow(clientX - centerX, 2) + Math.pow(clientY - centerY, 2)
         );
 
-        // 원 내부에서 시작했는지 판단
         const isInsideCircle = distanceToCenter <= circleRadius;
-        
-        // isConsonantModeActive 값 설정
-        isConsonantModeActive = !isInsideCircle; // 원 밖에서 시작하면 자음 모드, 원 안에서 시작하면 모음 모드
+        isConsonantModeActive = !isInsideCircle;
 
-        // 시각적 피드백을 위한 클래스 추가/제거
-        if (isConsonantModeActive) {
-            mainInputButton.classList.add('consonant-mode');
-            mainInputButton.classList.remove('vowel-mode');
-        } else {
-            mainInputButton.classList.add('vowel-mode');
-            mainInputButton.classList.remove('consonant-mode');
-        }
-		
-        debugOutput.textContent = `제스처 시작 (모드: ${isConsonantModeActive ? '자음' : '모음'}): (${startX.toFixed(0)}, ${startY.toFixed(0)})`;
+        debugOutput.textContent = `제스처 시작 (모드: ${isConsonantModeActive ? '자음' : '모음'} - ${isInsideCircle ? '원 내부' : '원 외부'} 시작): (${startX.toFixed(0)}, ${startY.toFixed(0)})`;
     }
 
     function handleMove(e) {
@@ -342,8 +324,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             firstDragAngle = Math.atan2(deltaY_start, deltaX_start) * (180 / Math.PI);
             if (firstDragAngle < 0) firstDragAngle += 360;
-            inputSequence.push(getDirectionStringFromAngle(firstDragAngle));
-            lastSegmentAngle = firstDragAngle;
+
+            // 여기서 초기 8방향을 확실히 결정하고 저장
+            initialRecognizedDirection = getDirectionStringFromAngle(firstDragAngle);
+            inputSequence.push(initialRecognizedDirection); // 초기 방향만 먼저 시퀀스에 추가
+            lastSegmentAngle = firstDragAngle; // 첫 드래그 시작 각도를 기준으로 세그먼트 각도 초기화
 
             debugOutput.textContent = `드래그 시작! 첫 방향: ${inputSequence[0]} (각도: ${firstDragAngle.toFixed(1)}°)`;
         }
@@ -360,16 +345,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 const relativeAngleDiff = getRelativeAngleDifference(lastSegmentAngle, currentSegmentAngle);
                 const absAngleDiff = Math.abs(relativeAngleDiff);
 
-                if (absAngleDiff >= COMMON_MIN_TURN_ANGLE && absAngleDiff <= COMMON_MAX_TURN_ANGLE) {
-                    let turnDirectionName = null;
+                // 현재 세그먼트 각도가 첫 드래그 방향에서 20도 이상 벗어났고 (초기 방향 기준 유연성),
+                // 그리고 COMMON_MIN_TURN_ANGLE(25도) 이상 꺾였다면 턴으로 간주
+                const angleFromInitialDirection = getRelativeAngleDifference(firstDragAngle, currentSegmentAngle);
+                const absAngleFromInitialDirection = Math.abs(angleFromInitialDirection);
 
-                    if (relativeAngleDiff > 0) {
+                if (absAngleFromInitialDirection >= 20 && absAngleDiff >= COMMON_MIN_TURN_ANGLE) {
+                    let turnDirectionName = null;
+                    if (relativeAngleDiff > 0) { // 시계방향
                         if (absAngleDiff <= VOWEL_SMALL_TURN_ANGLE_MAX) {
                             turnDirectionName = 'right';
                         } else {
                             turnDirectionName = 'right_large';
                         }
-                    } else {
+                    } else { // 반시계방향
                         if (absAngleDiff <= VOWEL_SMALL_TURN_ANGLE_MAX) {
                             turnDirectionName = 'left';
                         } else {
@@ -377,13 +366,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
 
-                    if (inputSequence.length === 1 && turnDirectionName) {
-                        inputSequence.push(turnDirectionName);
-                        debugOutput.textContent = `방향 전환 감지 (1차): ${inputSequence[0]} -> ${inputSequence[1]} (꺾임: ${relativeAngleDiff.toFixed(1)}°)`;
-                    }
-                    else if (inputSequence.length === 2 && turnDirectionName) {
-                        const lastTurnInSequence = inputSequence[inputSequence.length - 1];
-                        if (lastTurnInSequence !== turnDirectionName) {
+                    if (turnDirectionName) {
+                        if (inputSequence.length === 1) { // 첫 꺾임
+                            inputSequence.push(turnDirectionName);
+                            debugOutput.textContent = `방향 전환 감지 (1차): ${inputSequence[0]} -> ${inputSequence[1]} (꺾임: ${relativeAngleDiff.toFixed(1)}°)`;
+                        } else if (inputSequence.length === 2 && inputSequence[1] !== turnDirectionName) { // 2차 꺾임
                             inputSequence.push(turnDirectionName);
                             debugOutput.textContent = `방향 전환 감지 (2차): ${inputSequence[0]} -> ${inputSequence[1]} -> ${inputSequence[2]} (꺾임: ${relativeAngleDiff.toFixed(1)}°)`;
                         }
@@ -413,212 +400,189 @@ document.addEventListener('DOMContentLoaded', () => {
         const deltaY = endY - startY;
         const totalDragDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         const duration = Date.now() - touchStartTime;
-		
-		// --- 탭으로 인한 모드 전환 로직은 위 handleStart로 이동했으니,
-        // 이곳에서는 유효한 드래그가 아닐 경우만 처리하면 돼.
-        if (!isDragging || totalDragDistance < DRAG_DISTANCE_THRESHOLD) { // 드래그 시작 조건 불충족 시 (짧은 터치 등)
-             debugOutput.textContent = `유효한 제스처 아님. (드래그 거리 부족)`;
-             resetGestureState();
-             return;
-        }		
-		
+
+        if (!isDragging || totalDragDistance < DRAG_DISTANCE_THRESHOLD) {
+            debugOutput.textContent = `유효한 제스처 아님. (드래그 거리 부족)`;
+            resetGestureState();
+            return;
+        }
+
         let char = null;
-        let finalInputType = isConsonantModeActive ? 'consonant' : 'vowel'; // 현재 모드에 따라 입력 타입 결정
+        let finalInputType = isConsonantModeActive ? 'consonant' : 'vowel';
 
-        // --- 1. '탭' 감지 (모음 모드 전환) ---
-        //if (!isDragging && totalDragDistance < DRAG_DISTANCE_THRESHOLD && duration < TAP_DURATION_THRESHOLD) {
-        //    isConsonantModeActive = false; // 탭하면 무조건 모음 모드로 전환
-        //    debugOutput.textContent = `버튼 탭 감지! 모드: 모음으로 전환! (다음 드래그는 모음 입력)`;
-        //    resetGestureState();
-        //    return;
-        //}
-		
-		// 드래그로 글자가 입력 완료되면, 다음 제스처를 위해 버튼 클래스 초기화
-        mainInputButton.classList.remove('consonant-mode', 'vowel-mode');		
-		
-        // --- 2. '드래그' (글자 입력) 감지 ---
-        if (isDragging || totalDragDistance >= DRAG_DISTANCE_THRESHOLD) {
-            let finalOverallAngle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-            if (finalOverallAngle < 0) finalOverallAngle += 360;
+        // --- 꺾임이 없거나 20도 이내의 휘어짐은 첫 방향의 글자로 인식하도록 변경 ---
+        if (inputSequence.length === 1) { // 꺾임이 없는 경우 (또는 20도 이내의 휘어짐은 무시되었으므로)
+            // 첫 드래그 방향(initialRecognizedDirection)을 사용하여 글자 가져오기
+            char = getCharFromAngle(firstDragAngle, finalInputType);
+        } else { // 꺾임이 있는 경우 (inputSequence.length >= 2)
+            const first8Dir = initialRecognizedDirection; // 첫 인식 방향 사용
+            const turnLRDir = inputSequence.length > 1 ? inputSequence[1] : null;
+            const secondTurn = inputSequence.length > 2 ? inputSequence[2] : null;
 
-            // Step 1: 제스처로부터 'char' 값 가져오기 (폴백 로직 포함!)
-            if (inputSequence.length === 1) { // 단일 방향 드래그
-                char = getCharFromAngle(finalOverallAngle, finalInputType);
-            } else if (inputSequence.length >= 2) { // 1차 꺾임 이상
-                const first8Dir = inputSequence[0];
-                const turnLRDir = inputSequence.length > 1 ? inputSequence[1] : null; // Get first turn
-                const secondTurn = inputSequence.length > 2 ? inputSequence[2] : null; // Get second turn
-
-                if (finalInputType === 'consonant') {
+            if (finalInputType === 'consonant') {
+                char = getCharFromDoubleDrag(first8Dir, turnLRDir, finalInputType);
+                if (!char && first8Dir) { // 겹받침이 아닐 경우 첫 방향의 단일 자음으로 폴백
+                    const firstDirInfo = DIRECTIONS['consonant'][first8Dir];
+                    if (firstDirInfo) char = firstDirInfo.char;
+                }
+            } else { // Vowel mode
+                if (inputSequence.length === 2) {
                     char = getCharFromDoubleDrag(first8Dir, turnLRDir, finalInputType);
-                    // 콘솔 모드에서 두 방향 제스처가 특정 겹치기 자음이 아닐 경우, 첫 방향의 단일 자음으로 폴백
-                    if (!char && first8Dir) {
-                        const firstDirInfo = DIRECTIONS['consonant'][first8Dir];
-                        if (firstDirInfo) char = firstDirInfo.char;
-                    }
-                } else { // Vowel mode
-                    if (inputSequence.length === 2) { // 1차 꺾임
-                        char = getCharFromDoubleDrag(first8Dir, turnLRDir, finalInputType);
-                    } else if (inputSequence.length >= 3) { // 2차 이상 꺾임 (복합 모음)
-                        const key = `${first8Dir}_${turnLRDir}_${secondTurn}`;
-                        char = DIRECTIONS.multi_transitions_vowel[key] || null;
-                    }
+                } else if (inputSequence.length >= 3) {
+                    const key = `${first8Dir}_${turnLRDir}_${secondTurn}`;
+                    char = DIRECTIONS.multi_transitions_vowel[key] || null;
                 }
             }
+        }
 
-            if (char) {
-                let currentText = kkotipInput.value;
+        if (char) {
+            let currentText = kkotipInput.value;
 
-                // --- 한글 조합 로직 시작 (오빠의 원칙 반영!) ---
+            // --- 한글 조합 로직 시작 (오빠의 원칙 반영!) ---
 
-                // Case: 입력된 char가 자음일 때 (consonant mode)
-                if (finalInputType === 'consonant') {
-                    const choIndex = getCharIndex(char, 'cho');
-                    const jongIndex = getCharIndex(char, 'jong'); // 종성으로도 쓰일 수 있는 자음인지 확인
+            // Case: 입력된 char가 자음일 때 (consonant mode)
+            if (finalInputType === 'consonant') {
+                const choIndex = getCharIndex(char, 'cho');
+                const jongIndex = getCharIndex(char, 'jong'); // 종성으로도 쓰일 수 있는 자음인지 확인
 
-                    // 1. 초성+중성 상태에서 종성 추가 (예: 가 -> 간, 라 -> 랑, 뿌 -> 뿐)
+                // 1. 초성+중성 상태에서 종성 추가 (예: 가 -> 간, 라 -> 랑, 뿌 -> 뿐)
+                if (currentCho !== -1 && currentJung !== -1) {
+                    if (currentJong === -1) { // 기존 종성 없음: 새 자음을 종성으로 추가
+                        if (jongIndex !== -1) { // 입력된 자음이 종성으로 쓰일 수 있다면
+                            currentJong = jongIndex;
+                            kkotipInput.value = currentText.slice(0, -1) + combineHangul();
+                        } else { // 입력된 자음이 종성으로 쓰일 수 없음 (e.g., ㅉ, ㄸ, ㅃ 등) -> 새로운 글자의 초성
+                            // 기존 글자 확정하고 새 글자 시작
+                            let combinedChar = combineHangul();
+                            if(combinedChar) kkotipInput.value = currentText.slice(0, -1) + combinedChar;
+                            resetCombination();
+                            currentCho = choIndex; // 새 자음은 다음 글자의 초성
+                            kkotipInput.value += char;
+                        }
+                    } else { // 기존 종성 있음: 겹받침 시도 또는 종성 분리 후 새 글자 시작
+                        const prevJongChar = JONGSUNG[currentJong];
+                        const newComplexJong = COMPLEX_JONGSUNG_MAP[prevJongChar + char];
+                        if (newComplexJong) { // 겹받침 성공 (예: 값 + ㅅ -> 값, 만 + ㅎ -> 많)
+                            currentJong = getCharIndex(newComplexJong, 'jong');
+                            kkotipInput.value = currentText.slice(0, -1) + combineHangul();
+                        } else { // 겹받침 실패 (예: 간 + ㄷ -> 간ㄷ) -> 기존 글자 확정, 새 글자 시작
+                            let combinedChar = combineHangul();
+                            if(combinedChar) kkotipInput.value = currentText.slice(0, -1) + combinedChar;
+                            resetCombination();
+                            currentCho = choIndex; // 새 자음은 다음 글자의 초성
+                            kkotipInput.value += char;
+                        }
+                    }
+                } else { // 초성이나 중성이 없는 상태에서 자음 입력 -> 새로운 글자의 초성
+                    // 이전에 조합 중인 글자가 있다면 확정 (초성만 있는 상태에서 새 초성 입력 시)
+                    if (currentCho !== -1 || currentJung !== -1 || currentJong !== -1) {
+                        let combinedChar = combineHangul();
+                        if (combinedChar) kkotipInput.value = currentText.slice(0, -1) + combinedChar;
+                    }
+                    resetCombination();
+                    currentCho = choIndex; // 새 자음은 새로운 글자의 초성
+                    kkotipInput.value += char;
+                }
+            } else { // Case: 입력된 char가 모음일 때 (vowel mode)
+                const jungIndex = getCharIndex(char, 'jung'); // 새로 들어온 모음
+
+                let lastCharInInput = currentText.slice(-1);
+                let disassembledLastChar = disassembleHangul(lastCharInInput); // 마지막 글자 분해 시도
+
+                // 오빠의 1, 2번 규칙 적용: 종성(단일/겹받침)이 있는 완성형 글자 뒤에 모음이 오면 종성을 다음 초성으로 이동
+                if (disassembledLastChar && disassembledLastChar.jongIndex !== 0) { // 마지막 글자가 완성형이고 종성이 있다면
+                    let prevChoChar = disassembledLastChar.cho;
+                    let prevJungChar = disassembledLastChar.jung;
+                    let prevJongChar = disassembledLastChar.jong; // 이동할 종성
+
+                    let movedChoChar = null; // 다음 글자로 옮겨갈 초성
+                    let newJongIndexForPrevChar = 0; // 이전 글자의 새로운 종성 (없음)
+
+                    // 겹받침인 경우 (규칙 2)
+                    const splitJong = splitComplexJongsung(prevJongChar);
+                    if (splitJong) { // 겹받침이라면
+                        newJongIndexForPrevChar = getCharIndex(splitJong[0], 'jong'); // 첫 번째 자음만 남김
+                        movedChoChar = splitJong[1]; // 두 번째 자음이 다음 글자의 초성으로
+                    } else { // 단일 받침인 경우 (규칙 1)
+                        movedChoChar = prevJongChar; // 단일 받침 전체가 다음 글자의 초성으로
+                        newJongIndexForPrevChar = 0; // 이전 글자는 받침이 없어짐
+                    }
+
+                    // 1. 이전 글자 업데이트 (종성 제거 또는 변경)
+                    currentCho = getCharIndex(prevChoChar, 'cho');
+                    currentJung = getCharIndex(prevJungChar, 'jung');
+                    currentJong = newJongIndexForPrevChar; // 업데이트된 종성
+
+                    let reCombinedPrevChar = combineHangul();
+                    if (reCombinedPrevChar) {
+                        kkotipInput.value = currentText.slice(0, -1) + reCombinedPrevChar;
+                    } else {
+                        // 예상치 못한 상황 (초/중이 없으면 combineHangul이 빈 문자열 반환)
+                        // 이 경우는 발생하지 않아야 함 (이미 완성된 글자를 분해했으니)
+                        // 안전장치: 그냥 새 글자 시작으로 처리
+                        resetCombination();
+                        currentJung = jungIndex;
+                        currentCho = getCharIndex('ㅇ', 'cho');
+                        kkotipInput.value += char;
+                        debugOutput.textContent += " (오류: 이전 글자 재조합 실패)";
+                    }
+
+                    // 2. 새 글자 시작 (이동된 자음이 초성, 입력된 모음이 중성)
+                    resetCombination(); // 새 글자 조합을 위해 초기화
+                    currentCho = getCharIndex(movedChoChar, 'cho'); // 이동된 자음이 새 초성
+                    currentJung = jungIndex; // 입력된 모음이 새 중성
+                    
+                    // 새로운 글자를 바로 입력 (예: '나' or '하')
                     if (currentCho !== -1 && currentJung !== -1) {
-                        if (currentJong === -1) { // 기존 종성 없음: 새 자음을 종성으로 추가
-                            if (jongIndex !== -1) { // 입력된 자음이 종성으로 쓰일 수 있다면
-                                currentJong = jongIndex;
+                        kkotipInput.value += combineHangul();
+                    } else {
+                        // 이 경우도 발생하지 않아야 하지만, 안전장치
+                        kkotipInput.value += char;
+                    }
+
+                } else { // 마지막 글자가 완성형 한글이 아니거나 종성이 없는 경우 (기존 모음 처리 로직 유지)
+                    if (currentCho !== -1) { // 초성이 있는 상태에서 중성 추가
+                        if (currentJung === -1) { // 초성만 있고 중성 처음 입력 (예: ㄱ + ㅏ -> 가)
+                            currentJung = jungIndex;
+                            kkotipInput.value = currentText.slice(0, -1) + combineHangul();
+                        } else { // 초+중 상태에서 새 중성 (복합 중성 시도 또는 중성 교체)
+                            const prevJungChar = JUNGSUNG[currentJung];
+                            const newComplexJung = COMPLEX_JUNGSUNG_MAP[prevJungChar + char];
+                            if (newComplexJung) { // 복합 중성 성공 (예: ㅗ + ㅏ -> ㅘ)
+                                currentJung = getCharIndex(newComplexJung, 'jung');
                                 kkotipInput.value = currentText.slice(0, -1) + combineHangul();
-                            } else { // 입력된 자음이 종성으로 쓰일 수 없음 (e.g., ㅉ, ㄸ, ㅃ 등) -> 새로운 글자의 초성
-                                // 기존 글자 확정하고 새 글자 시작
+                            } else { // 복합 중성 실패 -> 기존 글자 확정, 새 글자 시작 (암묵적 ㅇ 초성)
                                 let combinedChar = combineHangul();
                                 if(combinedChar) kkotipInput.value = currentText.slice(0, -1) + combinedChar;
                                 resetCombination();
-                                currentCho = choIndex; // 새 자음은 다음 글자의 초성
-                                kkotipInput.value += char;
-                            }
-                        } else { // 기존 종성 있음: 겹받침 시도 또는 종성 분리 후 새 글자 시작
-                            const prevJongChar = JONGSUNG[currentJong];
-                            const newComplexJong = COMPLEX_JONGSUNG_MAP[prevJongChar + char];
-                            if (newComplexJong) { // 겹받침 성공 (예: 값 + ㅅ -> 값, 만 + ㅎ -> 많)
-                                currentJong = getCharIndex(newComplexJong, 'jong');
-                                kkotipInput.value = currentText.slice(0, -1) + combineHangul();
-                            } else { // 겹받침 실패 (예: 간 + ㄷ -> 간ㄷ) -> 기존 글자 확정, 새 글자 시작
-                                let combinedChar = combineHangul();
-                                if(combinedChar) kkotipInput.value = currentText.slice(0, -1) + combinedChar;
-                                resetCombination();
-                                currentCho = choIndex; // 새 자음은 다음 글자의 초성
+                                currentJung = jungIndex;
+                                currentCho = getCharIndex('ㅇ', 'cho'); // 모음으로 새 글자 시작 시 암묵적으로 'ㅇ' 초성 추가
                                 kkotipInput.value += char;
                             }
                         }
-                    } else { // 초성이나 중성이 없는 상태에서 자음 입력 -> 새로운 글자의 초성
-                        // 이전에 조합 중인 글자가 있다면 확정 (초성만 있는 상태에서 새 초성 입력 시)
+                    } else { // 초성이 없는 상태에서 모음 입력 -> 암묵적 'ㅇ' 초성으로 새 글자 시작
+                        // 이전에 조합 중인 글자가 있다면 확정 (완성된 글자 뒤에 모음만 입력 시)
                         if (currentCho !== -1 || currentJung !== -1 || currentJong !== -1) {
                             let combinedChar = combineHangul();
                             if (combinedChar) kkotipInput.value = currentText.slice(0, -1) + combinedChar;
                         }
                         resetCombination();
-                        currentCho = choIndex; // 새 자음은 새로운 글자의 초성
+                        currentJung = jungIndex;
+                        currentCho = getCharIndex('ㅇ', 'cho'); // 암묵적으로 'ㅇ' 초성 추가
                         kkotipInput.value += char;
                     }
-                } else { // Case: 입력된 char가 모음일 때 (vowel mode)
-                    const jungIndex = getCharIndex(char, 'jung'); // 새로 들어온 모음
-
-                    let lastCharInInput = currentText.slice(-1);
-                    let disassembledLastChar = disassembleHangul(lastCharInInput); // 마지막 글자 분해 시도
-
-                    // 오빠의 1, 2번 규칙 적용: 종성(단일/겹받침)이 있는 완성형 글자 뒤에 모음이 오면 종성을 다음 초성으로 이동
-                    if (disassembledLastChar && disassembledLastChar.jongIndex !== 0) { // 마지막 글자가 완성형이고 종성이 있다면
-                        let prevChoChar = disassembledLastChar.cho;
-                        let prevJungChar = disassembledLastChar.jung;
-                        let prevJongChar = disassembledLastChar.jong; // 이동할 종성
-
-                        let movedChoChar = null; // 다음 글자로 옮겨갈 초성
-                        let newJongIndexForPrevChar = 0; // 이전 글자의 새로운 종성 (없음)
-
-                        // 겹받침인 경우 (규칙 2)
-                        const splitJong = splitComplexJongsung(prevJongChar);
-                        if (splitJong) { // 겹받침이라면
-                            newJongIndexForPrevChar = getCharIndex(splitJong[0], 'jong'); // 첫 번째 자음만 남김
-                            movedChoChar = splitJong[1]; // 두 번째 자음이 다음 글자의 초성으로
-                        } else { // 단일 받침인 경우 (규칙 1)
-                            movedChoChar = prevJongChar; // 단일 받침 전체가 다음 글자의 초성으로
-                            newJongIndexForPrevChar = 0; // 이전 글자는 받침이 없어짐
-                        }
-
-                        // 1. 이전 글자 업데이트 (종성 제거 또는 변경)
-                        currentCho = getCharIndex(prevChoChar, 'cho');
-                        currentJung = getCharIndex(prevJungChar, 'jung');
-                        currentJong = newJongIndexForPrevChar; // 업데이트된 종성
-
-                        let reCombinedPrevChar = combineHangul();
-                        if (reCombinedPrevChar) {
-                            kkotipInput.value = currentText.slice(0, -1) + reCombinedPrevChar;
-                        } else {
-                            // 예상치 못한 상황 (초/중이 없으면 combineHangul이 빈 문자열 반환)
-                            // 이 경우는 발생하지 않아야 함 (이미 완성된 글자를 분해했으니)
-                            // 안전장치: 그냥 새 글자 시작으로 처리
-                            resetCombination();
-                            currentJung = jungIndex;
-                            currentCho = getCharIndex('ㅇ', 'cho');
-                            kkotipInput.value += char;
-                            debugOutput.textContent += " (오류: 이전 글자 재조합 실패)";
-                        }
-
-                        // 2. 새 글자 시작 (이동된 자음이 초성, 입력된 모음이 중성)
-                        resetCombination(); // 새 글자 조합을 위해 초기화
-                        currentCho = getCharIndex(movedChoChar, 'cho'); // 이동된 자음이 새 초성
-                        currentJung = jungIndex; // 입력된 모음이 새 중성
-                        
-                        // 새로운 글자를 바로 입력 (예: '나' or '하')
-                        if (currentCho !== -1 && currentJung !== -1) {
-                            kkotipInput.value += combineHangul();
-                        } else {
-                            // 이 경우도 발생하지 않아야 하지만, 안전장치
-                            kkotipInput.value += char;
-                        }
-
-                    } else { // 마지막 글자가 완성형 한글이 아니거나 종성이 없는 경우 (기존 모음 처리 로직 유지)
-                        if (currentCho !== -1) { // 초성이 있는 상태에서 중성 추가
-                            if (currentJung === -1) { // 초성만 있고 중성 처음 입력 (예: ㄱ + ㅏ -> 가)
-                                currentJung = jungIndex;
-                                kkotipInput.value = currentText.slice(0, -1) + combineHangul();
-                            } else { // 초+중 상태에서 새 중성 (복합 중성 시도 또는 중성 교체)
-                                const prevJungChar = JUNGSUNG[currentJung];
-                                const newComplexJung = COMPLEX_JUNGSUNG_MAP[prevJungChar + char];
-                                if (newComplexJung) { // 복합 중성 성공 (예: ㅗ + ㅏ -> ㅘ)
-                                    currentJung = getCharIndex(newComplexJung, 'jung');
-                                    kkotipInput.value = currentText.slice(0, -1) + combineHangul();
-                                } else { // 복합 중성 실패 -> 기존 글자 확정, 새 글자 시작 (암묵적 ㅇ 초성)
-                                    let combinedChar = combineHangul();
-                                    if(combinedChar) kkotipInput.value = currentText.slice(0, -1) + combinedChar;
-                                    resetCombination();
-                                    currentJung = jungIndex;
-                                    currentCho = getCharIndex('ㅇ', 'cho'); // 모음으로 새 글자 시작 시 암묵적으로 'ㅇ' 초성 추가
-                                    kkotipInput.value += char;
-                                }
-                            }
-                        } else { // 초성이 없는 상태에서 모음 입력 -> 암묵적 'ㅇ' 초성으로 새 글자 시작
-                            // 이전에 조합 중인 글자가 있다면 확정 (완성된 글자 뒤에 모음만 입력 시)
-                            if (currentCho !== -1 || currentJung !== -1 || currentJong !== -1) {
-                                let combinedChar = combineHangul();
-                                if (combinedChar) kkotipInput.value = currentText.slice(0, -1) + combinedChar;
-                            }
-                            resetCombination();
-                            currentJung = jungIndex;
-                            currentCho = getCharIndex('ㅇ', 'cho'); // 암묵적으로 'ㅇ' 초성 추가
-                            kkotipInput.value += char;
-                        }
-                    }
                 }
-
-                debugOutput.textContent = `입력 완료 (${finalInputType}): ${char} -> 현재 글자: ${kkotipInput.value.slice(-1)} (총 거리: ${totalDragDistance.toFixed(0)}px, 시퀀스: ${inputSequence.join(' -> ')})`;
-            } else {
-                debugOutput.textContent = `입력 실패 (${finalInputType}): 총 거리=${totalDragDistance.toFixed(0)}px, 시퀀스: ${inputSequence.join(' -> ')}`;
             }
+
+            debugOutput.textContent = `입력 완료 (${finalInputType}): ${char} -> 현재 글자: ${kkotipInput.value.slice(-1)} (총 거리: ${totalDragDistance.toFixed(0)}px, 시퀀스: ${inputSequence.join(' -> ')})`;
         } else {
-            debugOutput.textContent = `유효한 제스처 아님. (드래그도 탭도 아닌 짧은 터치)`;
+            debugOutput.textContent = `입력 실패 (${finalInputType}): 총 거리=${totalDragDistance.toFixed(0)}px, 시퀀스: ${inputSequence.join(' -> ')}`;
         }
 
-        // 드래그로 글자가 입력 완료되면 무조건 '자음 입력 모드'로 전환 (Default)
         isConsonantModeActive = true;
-        resetGestureState(); // 모든 제스처 완료 후 상태 초기화
+        resetGestureState();
     }
 
-    // --- 제스처 상태 초기화 함수 ---
     function resetGestureState() {
         isGestureActive = false;
         isDragging = false;
@@ -630,9 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
         lastSegmentAngle = null;
         inputSequence = [];
         touchStartTime = 0;
-		
-		// 제스처가 끝나면 버튼의 시각적 상태도 초기화
-        mainInputButton.classList.remove('consonant-mode', 'vowel-mode');
+        initialRecognizedDirection = null; // 초기화
     }
 
 

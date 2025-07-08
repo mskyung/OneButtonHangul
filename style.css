@@ -269,14 +269,14 @@ button#refreshButton:active {
     }
 
     .input-button {
-        width: 60vw; /* 모바일에서 40vw -> 60vw로 더 크게 */
-        height: 60vw; /* 모바일에서 40vw -> 60vw로 더 크게 */
+        width: 65vw; /* 모바일에서 40vw -> 60vw로 더 크게 */
+        height: 65vw; /* 모바일에서 40vw -> 60vw로 더 크게 */
         font-size: 1.2em; /* 폰트도 살짝 키워줄게요 */
     }
 
     .input-button .center-circle {
-        width: 40%; /* 모바일에서 원 크기 조정 */
-        height: 40%; /* 모바일에서 원 크기 조정 */
+        width: 45%; /* 모바일에서 원 크기 조정 */
+        height: 45%; /* 모바일에서 원 크기 조정 */
     }
 
     button#refreshButton {
@@ -310,8 +310,8 @@ button#refreshButton:active {
     }
 
     .input-button .center-circle {
-        width: 40%; /* 아주 작은 모바일에서 원 크기 조정 */
-        height: 40%; /* 아주 작은 모바일에서 원 크기 조정 */
+        width: 50%; /* 아주 작은 모바일에서 원 크기 조정 */
+        height: 50%; /* 아주 작은 모바일에서 원 크기 조정 */
     }
 
     button#refreshButton {
