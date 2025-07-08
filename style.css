@@ -115,12 +115,12 @@ textarea#kkotipInput {
 
 /* 개별 입력 버튼 스타일 */
 .input-button {
-    width: 200px; /* PC에서 고정 너비 - 150px -> 200px로 증가 */
-    height: 200px; /* PC에서 고정 높이 (정사각형) - 150px -> 200px로 증가 */
+    width: 100px; /* PC에서 고정 너비 - 150px -> 200px로 증가 */
+    height: 100px; /* PC에서 고정 높이 (정사각형) - 150px -> 200px로 증가 */
     min-width: 100px; /* 최소 너비 (모바일) */
     min-height: 100px; /* 최소 높이 (모바일, 정사각형 유지) */
-    max-width: 50vw; /* 최대 너비 (모바일 화면에 맞춰짐) - 40vw -> 50vw로 증가 */
-    max-height: 50vw; /* 최대 높이 (모바일 화면에 맞춰 정사각형 비율 유지) - 40vw -> 50vw로 증가 */
+    max-width: 35vw; /* 최대 너비 (모바일 화면에 맞춰짐) - 40vw -> 50vw로 증가 */
+    max-height: 35vw; /* 최대 높이 (모바일 화면에 맞춰 정사각형 비율 유지) - 40vw -> 50vw로 증가 */
     padding: 0;
     font-size: 1.5em;
     background-color: #f0f8f4;
@@ -178,8 +178,8 @@ textarea#kkotipInput {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 40%; /* 버튼 크기의 40% (조절 가능) */
-    height: 40%; /* 원을 만들기 위해 너비와 동일하게 */
+    width: 50%; /* 버튼 크기의 40% (조절 가능) */
+    height: 50%; /* 원을 만들기 위해 너비와 동일하게 */
     background-color: #f0f8f4; /* 버튼 배경색과 동일하게 */
     border-radius: 50%; /* 원 모양으로 */
     z-index: 2; /* 선들 위에 오도록 */
