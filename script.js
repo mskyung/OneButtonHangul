@@ -141,14 +141,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const DIRECTIONS = {
         'consonant': {
-            'right': { angle: [337.5, 22.5], char: 'ㅇ' },
-            'up-right': { angle: [292.5, 337.5], char: 'ㄱ' },
+            'right': { angle: [337.5, 22.5], char: 'ㄷ' },
+            'up-right': { angle: [292.5, 337.5], char: 'ㄴ' },
             'up': { angle: [247.5, 292.5], char: 'ㅅ' },
-            'up-left': { angle: [202.5, 247.5], char: 'ㅈ' },
-            'left': { angle: [157.5, 202.5], char: 'ㄷ' },
-            'down-left': { angle: [112.5, 157.5], char: 'ㄴ' },
+            'up-left': { angle: [202.5, 247.5], char: 'ㅁ' },
+            'left': { angle: [157.5, 202.5], char: 'ㅇ' },
+            'down-left': { angle: [112.5, 157.5], char: 'ㄱ' },
             'down': { angle: [67.5, 112.5], char: 'ㅂ' },
-            'down-right': { angle: [22.5, 67.5], char: 'ㅁ' }
+            'down-right': { angle: [22.5, 67.5], char: 'ㅈ' }
         },
         'vowel': {
             'right': { angle: [337.5, 22.5], char: 'ㅏ' },
@@ -161,14 +161,14 @@ document.addEventListener('DOMContentLoaded', () => {
             'down-right': { angle: [22.5, 67.5], char: 'ㅡ' }
         },
         'transitions_consonant': {
-            'right_left': 'ㅎ', 'right_right': '.',
-            'up_left': 'ㅊ', 'up_right': 'ㅆ',
-            'left_left': 'ㄸ', 'left_right': 'ㅌ',
-            'down_left': 'ㅃ', 'down_right': 'ㅍ',
-            'up-right_left': 'ㅋ', 'up-right_right': 'ㄲ',
-            'up-left_left': 'ㅉ', 'up-left_right': 'ㅉ',
-            'down-left_left': 'ㄹ', 'down-left_right': 'ㄹ',
-            'down-right_left': 'ㅁ', 'down-right_right': 'ㅁ',
+            'right_left': 'ㅌ', 'right_right': 'ㄸ',
+            'up_left': 'ㅍ', 'up_right': 'ㅃ',
+            'left_left': '.', 'left_right': 'ㅎ',
+            'down_left': 'ㅆ', 'down_right': 'ㅊ',
+            'up-right_left': 'ㄹ', 'up-right_right': 'ㄹ',
+            'up-left_left': 'ㅁ', 'up-left_right': 'ㅁ',
+            'down-left_left': 'ㅋ', 'down-left_right': 'ㄲ',
+            'down-right_left': 'ㅉ', 'down-right_right': 'ㅉ',
         },
         'transitions_vowel': {
             'right_left': 'ㅐ',
