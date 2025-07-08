@@ -124,8 +124,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const TAP_DURATION_THRESHOLD = 250;
     const DRAG_DISTANCE_THRESHOLD = 15;
-
-    const COMMON_MIN_TURN_ANGLE = 30; // 20도 정도의 휘어짐을 직선으로 인식하기 위해 설정
+	
+	// COMMON_MIN_TURN_ANGLE은 다시 원래대로 돌려놓거나, 아주 살짝만 늘리는 정도로 유지할게.
+    // 20도 정도의 '휘어짐'은 턴으로 인식하지 않도록
+    const COMMON_MIN_TURN_ANGLE = 30; // 30도 정도의 휘어짐을 직선으로 인식하기 위해 설정
     const COMMON_MAX_TURN_ANGLE = 350;
 
     const VOWEL_SMALL_TURN_ANGLE_MAX = 135;
@@ -257,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let isGestureActive = false;
-	//let initialRecognizedDirection = null; // 새로 추가: 처음 인식된 8방향 저장
+	//let initialRecognizedDirection = null; // 새로 추가: 처음 인식된 8방향 저장 (주석을 제거하면 글자 입력 안됨)
 
     function handleStart(e) {
         e.preventDefault();
@@ -346,11 +348,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const absAngleDiff = Math.abs(relativeAngleDiff);
 
                 // 현재 세그먼트 각도가 첫 드래그 방향에서 20도 이상 벗어났고 (초기 방향 기준 유연성),
-                // 그리고 COMMON_MIN_TURN_ANGLE(25도) 이상 꺾였다면 턴으로 간주
+                // 그리고 COMMON_MIN_TURN_ANGLE(30도) 이상 꺾였다면 턴으로 간주
                 const angleFromInitialDirection = getRelativeAngleDifference(firstDragAngle, currentSegmentAngle);
                 const absAngleFromInitialDirection = Math.abs(angleFromInitialDirection);
 
-                if (absAngleFromInitialDirection >= 20 && absAngleDiff >= COMMON_MIN_TURN_ANGLE) {
+                if (absAngleFromInitialDirection >= 30 && absAngleDiff >= COMMON_MIN_TURN_ANGLE) {
                     let turnDirectionName = null;
                     if (relativeAngleDiff > 0) { // 시계방향
                         if (absAngleDiff <= VOWEL_SMALL_TURN_ANGLE_MAX) {
