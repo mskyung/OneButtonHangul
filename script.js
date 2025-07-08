@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const TAP_DURATION_THRESHOLD = 250;
     const DRAG_DISTANCE_THRESHOLD = 8;
 
-    const COMMON_MIN_TURN_ANGLE = 30;
+    const COMMON_MIN_TURN_ANGLE = 15;
     const COMMON_MAX_TURN_ANGLE = 350;
 
     const VOWEL_SMALL_TURN_ANGLE_MAX = 135;
