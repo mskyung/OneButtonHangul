@@ -178,8 +178,8 @@ textarea#kkotipInput {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 20%; /* 버튼 크기의 40% (조절 가능) */
-    height: 20%; /* 원을 만들기 위해 너비와 동일하게 */
+    width: 40%; /* 버튼 크기의 40% (조절 가능) */
+    height: 40%; /* 원을 만들기 위해 너비와 동일하게 */
     background-color: #f0f8f4; /* 버튼 배경색과 동일하게 */
     border-radius: 50%; /* 원 모양으로 */
     z-index: 2; /* 선들 위에 오도록 */
@@ -251,8 +251,8 @@ button#refreshButton:active {
     }
 
     .input-button {
-        width: 60vw; /* 모바일에서 40vw -> 60vw로 더 크게 */
-        height: 60vw; /* 모바일에서 40vw -> 60vw로 더 크게 */
+        width: 50vw; /* 모바일에서 40vw -> 60vw로 더 크게 */
+        height: 50vw; /* 모바일에서 40vw -> 60vw로 더 크게 */
         font-size: 1.2em; /* 폰트도 살짝 키워줄게요 */
     }
 
@@ -286,14 +286,14 @@ button#refreshButton:active {
     }
 
     .input-button {
-        width: 70vw; /* 아주 작은 모바일에서 45vw -> 70vw로 더 크게 */
-        height: 70vw; /* 아주 작은 모바일에서 45vw -> 70vw로 더 크게 */
+        width: 60vw; /* 아주 작은 모바일에서 45vw -> 70vw로 더 크게 */
+        height: 60vw; /* 아주 작은 모바일에서 45vw -> 70vw로 더 크게 */
         font-size: 1.1em;
     }
 
     .input-button .center-circle {
-        width: 60%; /* 아주 작은 모바일에서 원 크기 조정 */
-        height: 60%; /* 아주 작은 모바일에서 원 크기 조정 */
+        width: 50%; /* 아주 작은 모바일에서 원 크기 조정 */
+        height: 50%; /* 아주 작은 모바일에서 원 크기 조정 */
     }
 
     button#refreshButton {
