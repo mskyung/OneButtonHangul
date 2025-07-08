@@ -269,8 +269,8 @@ button#refreshButton:active {
     }
 
     .input-button {
-        width: 65vw; /* 모바일에서 40vw -> 60vw로 더 크게 */
-        height: 65vw; /* 모바일에서 40vw -> 60vw로 더 크게 */
+        width: 70vw; /* 모바일에서 40vw -> 60vw로 더 크게 */
+        height: 70vw; /* 모바일에서 40vw -> 60vw로 더 크게 */
         font-size: 1.2em; /* 폰트도 살짝 키워줄게요 */
     }
 
