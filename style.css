@@ -275,8 +275,8 @@ button#refreshButton:active {
     }
 
     .input-button .center-circle {
-        width: 30%; /* 모바일에서 원 크기 조정 */
-        height: 30%; /* 모바일에서 원 크기 조정 */
+        width: 40%; /* 모바일에서 원 크기 조정 */
+        height: 40%; /* 모바일에서 원 크기 조정 */
     }
 
     button#refreshButton {
@@ -310,8 +310,8 @@ button#refreshButton:active {
     }
 
     .input-button .center-circle {
-        width: 30%; /* 아주 작은 모바일에서 원 크기 조정 */
-        height: 30%; /* 아주 작은 모바일에서 원 크기 조정 */
+        width: 40%; /* 아주 작은 모바일에서 원 크기 조정 */
+        height: 40%; /* 아주 작은 모바일에서 원 크기 조정 */
     }
 
     button#refreshButton {
