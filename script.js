@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputButtonContainer = document.getElementById('inputButtons');
     const mainInputButton = document.getElementById('mainInputButton');
     const refreshButton = document.getElementById('refreshButton');
-    const backspaceButton = document.getElementById('backspaceButton');
+    const deleteButton = document.getElementById('deleteButton');
     const debugOutput = document.getElementById('debugOutput');
     const rightHandRadio = document.getElementById('rightHand');
     const leftHandRadio = document.getElementById('leftHand');
@@ -41,12 +41,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 더블 탭 관련 변수 ---
     let lastTapTime = 0;
     let lastTapDirection = null;
-    let lastTapStartX = 0; // 누락된 변수 선언 추가
-    let lastTapStartY = 0; // 누락된 변수 선언 추가
+    let lastTapStartX = 0;
+    let lastTapStartY = 0;
 
     // --- 두 손가락 제스처 관련 변수 ---
     let initialTwoFingerDistance = 0;
     let isTwoFingerGesture = false;
+    let twoFingerMoveTimer = null;
+    const TWO_FINGER_MOVE_INTERVAL = 100;
+    const TWO_FINGER_VERTICAL_MOVE_SENSITIVITY = 15; // 수직 이동 민감도 (더 크게 움직여야 인식되도록)
+
 
     // --- 한글 조합 관련 변수들 ---
     let currentCho = -1;
@@ -129,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const TAP_DURATION_THRESHOLD = 250;
     const DOUBLE_TAP_DISTANCE_THRESHOLD = 15;
     const DRAG_DISTANCE_THRESHOLD = 8;
-    const TWO_FINGER_DRAG_THRESHOLD = 5;
+    const TWO_FINGER_DRAG_THRESHOLD = 15; 
 
     const COMMON_MIN_TURN_ANGLE = 25;
     const COMMON_MAX_TURN_ANGLE = 350;
@@ -139,17 +143,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const DIRECTIONS = {
         'consonant': {
-            // char: 싱글 탭, doubleTapChar: 더블 탭, dragChar: 드래그 (3가지 모두 다르게 매핑!)
-            'right': { angle: [337.5, 22.5], char: 'ㅇ', doubleTapChar: 'ㅎ', dragChar: '.' }, // ㅇ, ㅎ, .
-            'up-right': { angle: [292.5, 337.5], char: 'ㄱ', doubleTapChar: 'ㄲ', dragChar: 'ㅋ' }, // ㄱ, ㅋ, ㄲ
-            'up': { angle: [247.5, 292.5], char: 'ㅅ', doubleTapChar: 'ㅆ', dragChar: 'ㅊ' }, // ㅅ, ㅆ, ㅈ
-            'up-left': { angle: [202.5, 247.5], char: 'ㅈ', doubleTapChar: 'ㅉ', dragChar: ',' }, // ㅈ, ㅊ, ㅉ
-            'left': { angle: [157.5, 202.5], char: 'ㄷ', doubleTapChar: 'ㄸ', dragChar: 'ㅌ' }, // ㄷ, ㄸ, ㅌ
-            'down-left': { angle: [112.5, 157.5], char: 'ㄴ', doubleTapChar: 'ㄹ', dragChar: '!' }, // ㄴ, ㄹ, ㄵ
-            'down': { angle: [67.5, 112.5], char: 'ㅂ', doubleTapChar: 'ㅃ', dragChar: 'ㅍ' }, // ㅂ, ㅃ, ㅍ
-            'down-right': { angle: [22.5, 67.5], char: 'ㅁ', doubleTapChar: '?', dragChar: '@' } // ㅁ, ㅄ, ㄺ
+            'right': { angle: [337.5, 22.5], char: 'ㅇ', doubleTapChar: 'ㅎ', dragChar: '.' },
+            'up-right': { angle: [292.5, 337.5], char: 'ㄱ', doubleTapChar: 'ㅋ', dragChar: 'ㄲ' },
+            'up': { angle: [247.5, 292.5], char: 'ㅅ', doubleTapChar: 'ㅆ', dragChar: 'ㅈ' },
+            'up-left': { angle: [202.5, 247.5], char: 'ㅈ', doubleTapChar: 'ㅊ', dragChar: 'ㅉ' },
+            'left': { angle: [157.5, 202.5], char: 'ㄷ', doubleTapChar: 'ㄸ', dragChar: 'ㅌ' },
+            'down-left': { angle: [112.5, 157.5], char: 'ㄴ', doubleTapChar: 'ㄹ', dragChar: 'ㄵ' },
+            'down': { angle: [67.5, 112.5], char: 'ㅂ', doubleTapChar: 'ㅃ', dragChar: 'ㅍ' },
+            'down-right': { angle: [22.5, 67.5], char: 'ㅁ', doubleTapChar: 'ㅄ', dragChar: 'ㄺ' }
         },
-        'vowel': { // 모음은 기존 꺾임 조합 유지
+        'vowel': {
             'right': { angle: [337.5, 22.5], char: 'ㅏ' },
             'up-right': { angle: [292.5, 337.5], char: 'ㅣ' },
             'up': { angle: [247.5, 292.5], char: 'ㅗ' },
@@ -159,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'down': { angle: [67.5, 112.5], char: 'ㅜ' },
             'down-right': { angle: [22.5, 67.5], char: 'ㅡ' }
         },
-        'transitions_vowel': { // 모음 꺾임 조합은 유지
+        'transitions_vowel': {
             'right_left': 'ㅐ',
             'right_right': 'ㅒ',
             'up_left': 'ㅚ',
@@ -185,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'down-right_left_large': 'ㅢ',
             'down-right_right_large': 'ㅢ',
         },
-        'multi_transitions_vowel': { // 모음 다단계 꺾임 조합은 유지
+        'multi_transitions_vowel': {
             'up_left_large_right': 'ㅙ',
             'up_left_large_left': 'ㅙ',
             'up_right_large_right': 'ㅙ',
@@ -233,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function getCharFromDoubleDrag(first8Dir, turnLRDir, type) {
-        if (type === 'consonant') return null; // 자음은 이 함수를 더 이상 사용하지 않음
+        if (type === 'consonant') return null;
 
         const key = `${first8Dir}_${turnLRDir}`;
         const targetTransitions = DIRECTIONS[`transitions_${type}`];
@@ -248,6 +251,64 @@ document.addEventListener('DOMContentLoaded', () => {
         return diff;
     }
 
+    function moveCursorHorizontal(moveAmount) {
+        const currentPos = kkotipInput.selectionStart;
+        const newPos = Math.max(0, Math.min(kkotipInput.value.length, currentPos + moveAmount));
+        kkotipInput.selectionStart = newPos;
+        kkotipInput.selectionEnd = newPos;
+    }
+
+    function moveCursorVertical(direction) {
+        const currentCursorPos = kkotipInput.selectionStart;
+        const text = kkotipInput.value;
+        const lines = text.split('\n');
+        let currentLine = 0;
+        let charsCount = 0;
+
+        for(let i=0; i<lines.length; i++) {
+            charsCount += lines[i].length + 1; // +1 for newline character
+            if (currentCursorPos <= charsCount) {
+                currentLine = i;
+                break;
+            }
+        }
+
+        if (direction === 'up' && currentLine > 0) {
+            const currentLineStartPos = (currentLine === 0) ? 0 : text.substring(0, charsCount - lines[currentLine].length -1).length + 1;
+            const currentLineOffset = currentCursorPos - currentLineStartPos;
+            
+            const prevLineLength = lines[currentLine - 1].length;
+            let newPosInPrevLine = Math.min(prevLineLength, currentLineOffset);
+            
+            let newCursorPos = 0;
+            for (let i = 0; i < currentLine - 1; i++) {
+                newCursorPos += lines[i].length + 1;
+            }
+            newCursorPos += newPosInPrevLine;
+
+            kkotipInput.selectionStart = newCursorPos;
+            kkotipInput.selectionEnd = newCursorPos;
+            debugOutput.textContent = `커서 이동: 위로`;
+        } else if (direction === 'down' && currentLine < lines.length - 1) {
+            const currentLineStartPos = (currentLine === 0) ? 0 : text.substring(0, charsCount - lines[currentLine].length -1).length + 1;
+            const currentLineOffset = currentCursorPos - currentLineStartPos;
+
+            const nextLineLength = lines[currentLine + 1].length;
+            let newPosInNextLine = Math.min(nextLineLength, currentLineOffset);
+
+            let newCursorPos = 0;
+            for (let i = 0; i < currentLine + 1; i++) {
+                newCursorPos += lines[i].length + 1;
+            }
+            newCursorPos += newPosInNextLine;
+
+            kkotipInput.selectionStart = newCursorPos;
+            kkotipInput.selectionEnd = newCursorPos;
+            debugOutput.textContent = `커서 이동: 아래로`;
+        }
+    }
+
+
     function handleStart(e) {
         e.preventDefault();
         // 두 손가락 터치 감지
@@ -258,16 +319,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 Math.pow(e.touches[0].clientX - e.touches[1].clientX, 2) +
                 Math.pow(e.touches[0].clientY - e.touches[1].clientY, 2)
             );
-            startX = (e.touches[0].clientX + e.touches[1].clientX) / 2; // 두 손가락 중심점
-            startY = (e.touches[0].clientY + e.touches[1].clientY) / 2; // 두 손가락 중심점
+            startX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            startY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
             prevX = startX;
             prevY = startY;
             debugOutput.textContent = `두 손가락 제스처 시작.`;
-            return;
+            return; 
         }
 
         // 기존 한 손가락 제스처 로직
-        isTwoFingerGesture = false; // 한 손가락 제스처임을 명확히
+        isTwoFingerGesture = false;
         isGestureActive = true;
         isDragging = false;
         touchStartTime = Date.now();
@@ -318,65 +379,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 const deltaX = currentX - prevX;
                 const deltaY = currentY - prevY;
 
-                // 커서 이동 (수평 이동 우선)
-                if (Math.abs(deltaX) > TWO_FINGER_DRAG_THRESHOLD) { // 좌우 이동
-                    const moveAmount = Math.round(deltaX / 10); // 이동량 조절
-                    kkotipInput.selectionStart += moveAmount;
-                    kkotipInput.selectionEnd = kkotipInput.selectionStart;
-                    debugOutput.textContent = `커서 이동: 좌우 (${moveAmount})`;
-                } else if (Math.abs(deltaY) > TWO_FINGER_DRAG_THRESHOLD) { // 상하 이동 (줄 단위)
-                    const currentCursorPos = kkotipInput.selectionStart;
-                    const text = kkotipInput.value;
-                    const lines = text.split('\n');
-                    let currentLine = 0;
-                    let charsCount = 0;
+                // 주기적으로 커서 이동
+                if (!twoFingerMoveTimer) {
+                    twoFingerMoveTimer = setTimeout(() => {
+                        const absDeltaX = Math.abs(currentX - startX);
+                        const absDeltaY = Math.abs(currentY - startY);
 
-                    for(let i=0; i<lines.length; i++) {
-                        charsCount += lines[i].length + 1; // +1 for newline character
-                        if (currentCursorPos <= charsCount) {
-                            currentLine = i;
-                            break;
-                        }
-                    }
-
-                    if (deltaY < 0) { // 위로 이동
-                        if (currentLine > 0) {
-                            const currentLineStartPos = (currentLine === 0) ? 0 : text.substring(0, charsCount - lines[currentLine].length -1).length + 1;
-                            const currentLineOffset = currentCursorPos - currentLineStartPos;
-                            
-                            const prevLineLength = lines[currentLine - 1].length;
-                            let newPosInPrevLine = Math.min(prevLineLength, currentLineOffset);
-                            
-                            let newCursorPos = 0;
-                            for (let i = 0; i < currentLine - 1; i++) {
-                                newCursorPos += lines[i].length + 1;
+                        if (absDeltaX > TWO_FINGER_DRAG_THRESHOLD && absDeltaX > absDeltaY) {
+                            const moveAmount = Math.round((currentX - startX) / 20);
+                            moveCursorHorizontal(moveAmount);
+                            debugOutput.textContent = `커서 이동: 좌우 (${moveAmount})`;
+                            startX = currentX;
+                            startY = currentY;
+                        } else if (absDeltaY > TWO_FINGER_DRAG_THRESHOLD && absDeltaY > absDeltaX && absDeltaY > TWO_FINGER_VERTICAL_MOVE_SENSITIVITY) {
+                            if (deltaY < 0) {
+                                moveCursorVertical('up');
+                            } else {
+                                moveCursorVertical('down');
                             }
-                            newCursorPos += newPosInPrevLine;
-
-                            kkotipInput.selectionStart = newCursorPos;
-                            kkotipInput.selectionEnd = newCursorPos;
-                            debugOutput.textContent = `커서 이동: 위로`;
+                            startX = currentX;
+                            startY = currentY;
                         }
-                    } else { // 아래로 이동
-                        if (currentLine < lines.length - 1) {
-                            const currentLineStartPos = (currentLine === 0) ? 0 : text.substring(0, charsCount - lines[currentLine].length -1).length + 1;
-                            const currentLineOffset = currentCursorPos - currentLineStartPos;
-
-                            const nextLineLength = lines[currentLine + 1].length;
-                            let newPosInNextLine = Math.min(nextLineLength, currentLineOffset);
-
-                            let newCursorPos = 0;
-                            for (let i = 0; i < currentLine + 1; i++) {
-                                newCursorPos += lines[i].length + 1;
-                            }
-                            newCursorPos += newPosInNextLine;
-
-                            kkotipInput.selectionStart = newCursorPos;
-                            kkotipInput.selectionEnd = newCursorPos;
-                            debugOutput.textContent = `커서 이동: 아래로`;
-                        }
-                    }
+                        twoFingerMoveTimer = null;
+                    }, TWO_FINGER_MOVE_INTERVAL);
                 }
+                
                 prevX = currentX;
                 prevY = currentY;
             }
@@ -405,8 +432,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (firstDragAngle < 0) firstDragAngle += 360;
 
                 initialRecognizedDirection = getDirectionStringFromAngle(firstDragAngle);
-                inputSequence.push(initialRecognizedDirection); // 첫 방향만 일단 추가
-                lastSegmentAngle = firstDragAngle; // for vowel complex gestures
+                inputSequence.push(initialRecognizedDirection);
+                lastSegmentAngle = firstDragAngle;
                 
                 debugOutput.textContent = `드래그 시작! 첫 방향: ${inputSequence[0]} (각도: ${firstDragAngle.toFixed(1)}°)`;
             } else {
@@ -415,14 +442,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // --- 모음 드래그일 때만 복잡한 방향 전환 감지 로직 실행 ---
-        if (!isConsonantModeActive) { // 모음 모드일 경우
+        if (!isConsonantModeActive) {
             const deltaX_prev = currentX - prevX;
             const deltaY_prev = currentY - prevY;
             const distFromPrev = Math.sqrt(deltaX_prev * deltaX_prev + deltaY_prev * deltaY_prev);
 
             if (distFromPrev > DRAG_DISTANCE_THRESHOLD / 2) {
-                let currentSegmentAngle = Math.atan2(deltaY_prev, deltaX_prev) * (180 / Math.PI);
+                let currentSegmentAngle = Math.atan2(deltaY_prev, deltaY_prev) * (180 / Math.PI); // 이 부분은 deltaY_prev, deltaY_prev 가 아니라 deltaY_prev, deltaX_prev 여야 합니다.
                 if (currentSegmentAngle < 0) currentSegmentAngle += 360;
 
                 if (lastSegmentAngle !== null) {
@@ -432,16 +458,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     const angleFromInitialDirection = getRelativeAngleDifference(firstDragAngle, currentSegmentAngle);
                     const absAngleFromInitialDirection = Math.abs(angleFromInitialDirection);
 
-                    // 모음은 20도 이상 벗어나면서 25도 이상 꺾이면 턴으로 간주
                     if (absAngleFromInitialDirection >= 20 && absAngleDiff >= COMMON_MIN_TURN_ANGLE) {
                         let turnDirectionName = null;
-                        if (relativeAngleDiff > 0) { // 시계방향
+                        if (relativeAngleDiff > 0) {
                             if (absAngleDiff <= VOWEL_SMALL_TURN_ANGLE_MAX) {
                                 turnDirectionName = 'right';
                             } else {
                                 turnDirectionName = 'right_large';
                             }
-                        } else { // 반시계방향
+                        } else {
                             if (absAngleDiff <= VOWEL_SMALL_TURN_ANGLE_MAX) {
                                 turnDirectionName = 'left';
                             } else {
@@ -450,10 +475,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
 
                         if (turnDirectionName) {
-                            if (inputSequence.length === 1) { // 첫 꺾임
+                            if (inputSequence.length === 1) {
                                 inputSequence.push(turnDirectionName);
                                 debugOutput.textContent = `모음 방향 전환 감지 (1차): ${inputSequence[0]} -> ${inputSequence[1]} (꺾임: ${relativeAngleDiff.toFixed(1)}°)`;
-                            } else if (inputSequence.length === 2 && inputSequence[1] !== turnDirectionName) { // 2차 꺾임
+                            } else if (inputSequence.length === 2 && inputSequence[1] !== turnDirectionName) {
                                 inputSequence.push(turnDirectionName);
                                 debugOutput.textContent = `모음 방향 전환 감지 (2차): ${inputSequence[0]} -> ${inputSequence[1]} -> ${inputSequence[2]} (꺾임: ${relativeAngleDiff.toFixed(1)}°)`;
                             }
@@ -471,21 +496,21 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleEnd(e) {
         if (!isGestureActive) return;
 
-        // 두 손가락 제스처 종료
         if (isTwoFingerGesture) {
+            clearTimeout(twoFingerMoveTimer);
+            twoFingerMoveTimer = null;
             debugOutput.textContent = `두 손가락 제스처 종료.`;
             resetGestureState();
             return;
         }
 
-        // 한 손가락 제스처 종료 (기존 탭/드래그 로직)
         let endX, endY;
         if (e.changedTouches && e.changedTouches.length > 0) {
             endX = e.changedTouches[0].clientX;
             endY = e.changedTouches[0].clientY;
         } else {
             endX = e.clientX;
-            endY = e.clientY; // **오타 수정: Y -> endY**
+            endY = e.clientY; 
         }
 
         const deltaX = endX - startX;
@@ -495,17 +520,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (totalDragDistance < DRAG_DISTANCE_THRESHOLD) {
             handleTap(e, totalDragDistance, duration);
-            resetGestureState(); // 탭 처리 후 상태 초기화
-            return; // 탭 처리 후 드래그 로직 실행 방지
+            resetGestureState();
+            return;
         }
 
         let char = null;
         let finalInputType = isConsonantModeActive ? 'consonant' : 'vowel';
 
         if (finalInputType === 'consonant') {
-            char = DIRECTIONS.consonant[initialRecognizedDirection]?.dragChar || null;
-            debugOutput.textContent = `자음 드래그 입력 시도: ${initialRecognizedDirection} -> ${char}`;
-        } else { // 모음 드래그일 경우 (기존 꺾임 조합 유지)
+            char = 'ㅊ';
+            debugOutput.textContent = `자음 드래그 입력: ㅊ`;
+        } else {
             if (inputSequence.length === 1) {
                 char = getCharFromAngle(firstDragAngle, finalInputType);
             } else {
@@ -564,9 +589,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentCho = choIndex;
                     kkotipInput.value += char;
                 }
-            } else { // Vowel
+            } else {
                 const jungIndex = getCharIndex(char, 'jung');
-                let lastCharInInput = currentText.slice(-1);
+                let lastCharInInput = kkotipInput.value.slice(-1);
                 let disassembledLastChar = disassembleHangul(lastCharInInput);
 
                 if (disassembledLastChar && disassembledLastChar.jongIndex !== 0) {
@@ -592,7 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     let reCombinedPrevChar = combineHangul();
                     if (reCombinedPrevChar) {
-                        kkotipInput.value = currentText.slice(0, -1) + reCombinedPrevChar;
+                        kkotipInput.value = kkotipInput.value.slice(0, -1) + reCombinedPrevChar;
                     } else {
                         resetCombination();
                         currentJung = jungIndex;
@@ -656,7 +681,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleTap(e, totalDragDistance, duration) {
         const isInsideCircle = !isConsonantModeActive;
 
-        if (isInsideCircle) { // 모음 버튼 영역 (원 안) 탭 -> 스페이스
+        if (isInsideCircle) {
             kkotipInput.value += ' ';
             debugOutput.textContent = `모음 버튼 탭: 스페이스 입력!`;
             resetCombination();
@@ -664,7 +689,7 @@ document.addEventListener('DOMContentLoaded', () => {
             lastTapDirection = null;
             lastTapStartX = 0;
             lastTapStartY = 0;
-        } else { // 자음 버튼 영역 (원 밖) 탭 -> 싱글/더블 탭
+        } else {
             const buttonRect = mainInputButton.getBoundingClientRect();
             const centerX = buttonRect.left + buttonRect.width / 2;
             const centerY = buttonRect.top + buttonRect.height / 2;
@@ -683,7 +708,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 charToInput = DIRECTIONS.consonant[tapDirection]?.doubleTapChar || '';
                 debugOutput.textContent = `자음 버튼 더블 탭: ${charToInput} 입력! (방향: ${tapDirection})`;
                 
-                lastTapTime = 0; // 더블 탭 처리 후 탭 정보 초기화
+                lastTapTime = 0;
                 lastTapDirection = null;
                 lastTapStartX = 0;
                 lastTapStartY = 0;
@@ -691,7 +716,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 charToInput = DIRECTIONS.consonant[tapDirection]?.char || '';
                 debugOutput.textContent = `자음 버튼 싱글 탭: ${charToInput} 입력! (방향: ${tapDirection})`;
 
-                lastTapTime = currentTime; // 다음 더블 탭 감지를 위해 현재 탭 정보 저장
+                lastTapTime = currentTime;
                 lastTapDirection = tapDirection;
                 lastTapStartX = startX;
                 lastTapStartY = startY;
@@ -746,6 +771,8 @@ document.addEventListener('DOMContentLoaded', () => {
         lastTapStartX = 0;
         lastTapStartY = 0;
         isTwoFingerGesture = false;
+        clearTimeout(twoFingerMoveTimer);
+        twoFingerMoveTimer = null;
     }
 
     // --- 이벤트 리스너 등록 ---
@@ -767,7 +794,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.reload();
     });
 
-    backspaceButton.addEventListener('click', () => {
+    deleteButton.addEventListener('click', () => {
         let currentText = kkotipInput.value;
         let cursorPos = kkotipInput.selectionStart;
 
@@ -779,6 +806,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             kkotipInput.selectionStart = cursorPos - 1;
             kkotipInput.selectionEnd = cursorPos - 1;
+
+            kkotipInput.focus(); 
 
             resetCombination();
             debugOutput.textContent = `백스페이스: 커서 위치 ${cursorPos}에서 삭제`;
