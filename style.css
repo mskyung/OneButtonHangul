@@ -232,8 +232,8 @@ button#deleteButton:active {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 40%; 
-    height: 40%; 
+    width: 50%; 
+    height: 50%; 
     background-color: #f0f8f4; 
     border-radius: 50%; 
     z-index: 2; 
@@ -275,8 +275,8 @@ button#deleteButton:active {
     }
 
     .input-button {
-        width: 80vw; 
-        height: 80vw; 
+        width: 70vw; 
+        height: 70vw; 
         font-size: 1.2em; 
     }
 
@@ -315,8 +315,8 @@ button#deleteButton:active {
     }
 
     .input-button .center-circle {
-        width: 50%; 
-        height: 50%; 
+        width: 45%; 
+        height: 45%; 
     }
 
     #controlPanel {
